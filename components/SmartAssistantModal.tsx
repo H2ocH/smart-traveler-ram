@@ -9,7 +9,6 @@ import {
 } from '@/data/airportDatabase';
 import {
     calculateMultipleRoutes,
-    getDirectionText,
     getGateZoneId,
     NavigationStep,
     RouteOption
@@ -288,13 +287,20 @@ export default function SmartAssistantModal({ visible, onClose, flightNumber, lo
                     {/* Compass Card */}
                     {currentStep && (
                         <View style={styles.compassCard}>
-                            <CompassIndicator targetDirection={getTargetDirection()} size={140} />
-                            <View style={styles.compassInfo}>
-                                <Text style={styles.compassDirection}>{getDirectionText(currentStep.direction)}</Text>
-                                <Text style={styles.compassInstruction}>{currentStep.instruction}</Text>
-                                <View style={styles.compassDistance}>
+                            <CompassIndicator
+                                targetDirection={getTargetDirection()}
+                                size={150}
+                                zoneName={currentStep.zoneName}
+                            />
+                            <Text style={styles.compassInstruction}>{currentStep.instruction}</Text>
+                            <View style={styles.compassMeta}>
+                                <View style={styles.compassMetaItem}>
                                     <MaterialCommunityIcons name="walk" size={16} color="#64748B" />
-                                    <Text style={styles.compassDistanceText}>{currentStep.distance}</Text>
+                                    <Text style={styles.compassMetaText}>{currentStep.distance}</Text>
+                                </View>
+                                <View style={styles.compassMetaItem}>
+                                    <MaterialCommunityIcons name="clock-outline" size={16} color="#64748B" />
+                                    <Text style={styles.compassMetaText}>~{currentStep.estimatedTime} min</Text>
                                 </View>
                             </View>
                         </View>
@@ -929,5 +935,26 @@ const styles = StyleSheet.create({
         fontSize: 13,
         fontWeight: '700',
         color: '#92400E',
+    },
+    compassMeta: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 20,
+        marginTop: 12,
+    },
+    compassMetaItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: '#F1F5F9',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 8,
+    },
+    compassMetaText: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#1E293B',
     },
 });

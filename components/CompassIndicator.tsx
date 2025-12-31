@@ -6,9 +6,10 @@ import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 interface Props {
     targetDirection?: number; // Target direction in degrees (0-360)
     size?: number;
+    zoneName?: string; // Name of destination zone
 }
 
-export default function CompassIndicator({ targetDirection = 0, size = 120 }: Props) {
+export default function CompassIndicator({ targetDirection = 0, size = 140, zoneName }: Props) {
     const [heading, setHeading] = useState(0);
     const [subscription, setSubscription] = useState<any>(null);
     const rotateAnim = React.useRef(new Animated.Value(0)).current;
@@ -42,52 +43,35 @@ export default function CompassIndicator({ targetDirection = 0, size = 120 }: Pr
         setSubscription(null);
     };
 
-    const getCardinalDirection = (deg: number): string => {
-        if (deg >= 337.5 || deg < 22.5) return 'N';
-        if (deg >= 22.5 && deg < 67.5) return 'NE';
-        if (deg >= 67.5 && deg < 112.5) return 'E';
-        if (deg >= 112.5 && deg < 157.5) return 'SE';
-        if (deg >= 157.5 && deg < 202.5) return 'S';
-        if (deg >= 202.5 && deg < 247.5) return 'SO';
-        if (deg >= 247.5 && deg < 292.5) return 'O';
-        return 'NO';
-    };
-
-    const rotation = rotateAnim.interpolate({
-        inputRange: [0, 360],
-        outputRange: ['360deg', '0deg'],
-    });
-
+    // Calculate the angle to point to target
     const targetRotation = ((targetDirection - heading + 360) % 360);
 
     return (
         <View style={[styles.container, { width: size, height: size }]}>
-            {/* Compass Ring */}
-            <View style={[styles.compassRing, { width: size, height: size, borderRadius: size / 2 }]}>
-                <Animated.View style={[styles.compassInner, { transform: [{ rotate: rotation }] }]}>
-                    {/* Cardinal Points */}
-                    <Text style={[styles.cardinal, styles.cardinalN]}>N</Text>
-                    <Text style={[styles.cardinal, styles.cardinalE]}>E</Text>
-                    <Text style={[styles.cardinal, styles.cardinalS]}>S</Text>
-                    <Text style={[styles.cardinal, styles.cardinalO]}>O</Text>
+            {/* Outer Ring */}
+            <View style={[styles.outerRing, { width: size, height: size, borderRadius: size / 2 }]}>
+                {/* Direction Arrow - Points to next destination */}
+                <Animated.View style={[
+                    styles.arrowContainer,
+                    { transform: [{ rotate: `${targetRotation}deg` }] }
+                ]}>
+                    <View style={styles.arrow}>
+                        <MaterialCommunityIcons name="navigation" size={36} color="#B22222" />
+                    </View>
                 </Animated.View>
-            </View>
 
-            {/* Target Arrow */}
-            <View style={[
-                styles.targetArrow,
-                { transform: [{ rotate: `${targetRotation}deg` }] }
-            ]}>
-                <View style={styles.arrowHead}>
-                    <MaterialCommunityIcons name="navigation" size={32} color="#B22222" />
+                {/* Center Circle */}
+                <View style={styles.centerCircle}>
+                    <MaterialCommunityIcons name="walk" size={24} color="#B22222" />
                 </View>
             </View>
 
-            {/* Center */}
-            <View style={styles.centerDot}>
-                <Text style={styles.headingText}>{heading}°</Text>
-                <Text style={styles.directionText}>{getCardinalDirection(heading)}</Text>
-            </View>
+            {/* Destination Label */}
+            {zoneName && (
+                <View style={styles.destinationLabel}>
+                    <Text style={styles.destinationText}>Vers: {zoneName}</Text>
+                </View>
+            )}
         </View>
     );
 }
@@ -97,69 +81,49 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    compassRing: {
-        backgroundColor: 'rgba(178, 34, 34, 0.08)',
-        borderWidth: 3,
+    outerRing: {
+        backgroundColor: '#fff',
+        borderWidth: 4,
         borderColor: '#B22222',
         alignItems: 'center',
         justifyContent: 'center',
-        position: 'absolute',
+        shadowColor: '#B22222',
+        shadowOpacity: 0.2,
+        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 8,
     },
-    compassInner: {
-        width: '100%',
-        height: '100%',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    cardinal: {
-        position: 'absolute',
-        fontSize: 14,
-        fontWeight: '800',
-        color: '#64748B',
-    },
-    cardinalN: {
-        top: 8,
-        color: '#B22222',
-        fontWeight: '900',
-    },
-    cardinalE: {
-        right: 8,
-    },
-    cardinalS: {
-        bottom: 8,
-    },
-    cardinalO: {
-        left: 8,
-    },
-    targetArrow: {
+    arrowContainer: {
         position: 'absolute',
         width: '100%',
         height: '100%',
         alignItems: 'center',
+        justifyContent: 'flex-start',
+        paddingTop: 8,
     },
-    arrowHead: {
-        marginTop: 4,
+    arrow: {
+        transform: [{ rotate: '0deg' }],
     },
-    centerDot: {
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: '#fff',
+    centerCircle: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        backgroundColor: 'rgba(178, 34, 34, 0.1)',
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 4,
+        borderWidth: 2,
+        borderColor: '#B22222',
     },
-    headingText: {
+    destinationLabel: {
+        marginTop: 12,
+        backgroundColor: '#B22222',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+    },
+    destinationText: {
+        color: '#fff',
         fontSize: 14,
-        fontWeight: '900',
-        color: '#1E293B',
-    },
-    directionText: {
-        fontSize: 10,
         fontWeight: '700',
-        color: '#64748B',
     },
 });

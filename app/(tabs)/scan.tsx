@@ -520,13 +520,13 @@ function QRScannerScreenContent() {
           <Text style={styles.clearButtonText}>Effacer Tout</Text>
         </TouchableOpacity>
 
-        {currentMode === 'checkout' && (
-          <TouchableOpacity style={styles.claimButton} onPress={() => setShowClaimModal(true)}>
-            <MaterialCommunityIcons name="alert-circle" size={18} color="#B22222" />
-            <Text style={styles.claimButtonText}>Bagage non trouvé ?</Text>
-          </TouchableOpacity>
-        )}
       </View>
+
+      {currentMode === 'checkout' && (
+        <TouchableOpacity style={styles.claimLink} onPress={() => setShowClaimModal(true)}>
+          <Text style={styles.claimLinkText}>Bagage introuvable ? Réclamer ici</Text>
+        </TouchableOpacity>
+      )}
 
       {/* Baggage Claim Modal */}
       <BaggageClaimModal
@@ -957,21 +957,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 16,
   },
-  claimButton: {
-    flexDirection: 'row',
+  claimLink: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#FFF',
-    borderWidth: 2,
-    borderColor: '#B22222',
-    padding: 14,
-    borderRadius: 12,
+    padding: 12,
+    marginTop: 8,
   },
-  claimButtonText: {
+  claimLinkText: {
     color: '#B22222',
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
 });
 

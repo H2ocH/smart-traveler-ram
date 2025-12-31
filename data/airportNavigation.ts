@@ -412,11 +412,11 @@ export function getGateZoneId(gate: string): string {
 // Obtenir le nom de direction en français
 export function getDirectionText(direction: NavigationStep['direction']): string {
     switch (direction) {
-        case 'straight': return '↑ Tout droit';
-        case 'left': return '← Gauche';
-        case 'right': return '→ Droite';
-        case 'up': return '↗ Monter';
-        case 'down': return '↘ Descendre';
-        case 'arrive': return '✓ Arrivée';
+        case 'straight': return 'Continuez';
+        case 'left': return 'Tournez à gauche';
+        case 'right': return 'Tournez à droite';
+        case 'up': return 'Montez';
+        case 'down': return 'Descendez';
+        case 'arrive': return 'Destination';
     }
 }
