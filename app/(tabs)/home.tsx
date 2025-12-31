@@ -9,7 +9,7 @@ import {
 } from '@/data/airportDatabase';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
@@ -27,13 +27,18 @@ export default function HomeScreen() {
   const [currentTime, setCurrentTime] = useState(getCurrentTime());
   const [flightInfo, setFlightInfo] = useState<any>(null);
   const [securityInfo, setSecurityInfo] = useState<any>(null);
-  const pulseAnim = useState(new Animated.Value(1))[0];
+
+  // Animations
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const floatAnim = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
 
   // Afficher le popup au démarrage
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowSmartAssistant(true);
-    }, 1000);
+    }, 1200);
     return () => clearTimeout(timer);
   }, []);
 
@@ -42,7 +47,6 @@ export default function HomeScreen() {
     const interval = setInterval(() => {
       setCurrentTime(getCurrentTime());
 
-      // Refresh flight & security data
       const flights = generateFlights();
       const security = generateSecurityZones();
       const passenger = getPassengerContext();
@@ -69,16 +73,45 @@ export default function HomeScreen() {
     setSecurityInfo(bestSec);
   }, []);
 
-  // Pulse animation
+  // Animations
   useEffect(() => {
+    // Fade in
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 800,
+      useNativeDriver: true,
+    }).start();
+
+    // Scale up
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      tension: 50,
+      friction: 7,
+      useNativeDriver: true,
+    }).start();
+
+    // Pulse animation
     const pulse = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.05, duration: 1000, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1.08, duration: 1200, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 1200, useNativeDriver: true }),
       ])
     );
     pulse.start();
-    return () => pulse.stop();
+
+    // Float animation
+    const float = Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatAnim, { toValue: -8, duration: 2000, useNativeDriver: true }),
+        Animated.timing(floatAnim, { toValue: 0, duration: 2000, useNativeDriver: true }),
+      ])
+    );
+    float.start();
+
+    return () => {
+      pulse.stop();
+      float.stop();
+    };
   }, []);
 
   return (
@@ -90,173 +123,222 @@ export default function HomeScreen() {
 
       {/* Gradient Header */}
       <View style={styles.header}>
-        <View style={styles.headerGlow} />
+        <View style={styles.headerPattern}>
+          {[...Array(6)].map((_, i) => (
+            <View key={i} style={[styles.patternCircle, {
+              left: (i % 3) * 150 - 50,
+              top: Math.floor(i / 3) * 100 - 50,
+              opacity: 0.05 + (i * 0.02),
+              width: 100 + i * 30,
+              height: 100 + i * 30,
+            }]} />
+          ))}
+        </View>
 
-        {/* Top Row - Logo & Clock */}
+        {/* Top Row */}
         <View style={styles.headerTop}>
           <View style={styles.logoRow}>
             <View style={styles.logoBox}>
-              <MaterialCommunityIcons name="airplane" size={24} color="#fff" />
+              <MaterialCommunityIcons name="airplane" size={26} color="#fff" />
             </View>
             <View>
-              <Text style={styles.brandName}>Royal Air Maroc</Text>
+              <Text style={styles.brandName}>ROYAL AIR MAROC</Text>
               <Text style={styles.appName}>Smart Traveler</Text>
             </View>
           </View>
           <View style={styles.clockBox}>
-            <MaterialCommunityIcons name="clock-outline" size={14} color="rgba(255,255,255,0.8)" />
+            <View style={styles.clockDot} />
             <Text style={styles.clockText}>{formatTimeWithSeconds(currentTime)}</Text>
           </View>
         </View>
 
-        {/* Flight Info Card */}
+        {/* Flight Card */}
         {flightInfo && (
-          <View style={styles.flightCard}>
-            <View style={styles.flightLeft}>
-              <Text style={styles.flightLabel}>Votre vol</Text>
-              <View style={styles.flightRow}>
-                <Text style={styles.flightNumber}>{flightInfo.flightNumber}</Text>
-                <MaterialCommunityIcons name="arrow-right" size={18} color="#D4AF37" />
-                <Text style={styles.flightDest}>{flightInfo.destinationCode}</Text>
+          <Animated.View style={[styles.flightCard, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
+            <View style={styles.flightHeader}>
+              <View style={styles.flightBadge}>
+                <Text style={styles.flightBadgeText}>VOL ACTIF</Text>
               </View>
-              <Text style={styles.flightDestFull}>{flightInfo.destination}</Text>
+              <View style={styles.statusBadge}>
+                <View style={styles.statusDot} />
+                <Text style={styles.statusText}>À l'heure</Text>
+              </View>
             </View>
-            <View style={styles.flightRight}>
-              <Text style={styles.gateLabel}>Porte</Text>
-              <Text style={styles.gateValue}>{flightInfo.newGate || flightInfo.gate}</Text>
-              <Text style={styles.terminalText}>Terminal {flightInfo.terminal}</Text>
+
+            <View style={styles.flightMain}>
+              <View style={styles.flightRoute}>
+                <View style={styles.cityBox}>
+                  <Text style={styles.cityCode}>CMN</Text>
+                  <Text style={styles.cityName}>Casablanca</Text>
+                </View>
+                <View style={styles.routeLine}>
+                  <View style={styles.routeDot} />
+                  <View style={styles.routeDash} />
+                  <MaterialCommunityIcons name="airplane" size={20} color="#D4AF37" style={styles.routePlane} />
+                  <View style={styles.routeDash} />
+                  <View style={styles.routeDot} />
+                </View>
+                <View style={[styles.cityBox, { alignItems: 'flex-end' }]}>
+                  <Text style={styles.cityCode}>{flightInfo.destinationCode}</Text>
+                  <Text style={styles.cityName}>{flightInfo.destination.split(' ')[0]}</Text>
+                </View>
+              </View>
+
+              <View style={styles.flightDetails}>
+                <View style={styles.flightDetail}>
+                  <Text style={styles.detailLabel}>N° VOL</Text>
+                  <Text style={styles.detailValue}>{flightInfo.flightNumber}</Text>
+                </View>
+                <View style={styles.flightDetail}>
+                  <Text style={styles.detailLabel}>PORTE</Text>
+                  <Text style={[styles.detailValue, styles.gateValue]}>{flightInfo.newGate || flightInfo.gate}</Text>
+                </View>
+                <View style={styles.flightDetail}>
+                  <Text style={styles.detailLabel}>TERMINAL</Text>
+                  <Text style={styles.detailValue}>{flightInfo.terminal}</Text>
+                </View>
+              </View>
             </View>
-          </View>
+          </Animated.View>
         )}
 
         {/* Countdown */}
         {flightInfo && (
           <Animated.View style={[styles.countdownCard, { transform: [{ scale: pulseAnim }] }]}>
-            <MaterialCommunityIcons name="timer-outline" size={20} color="#D4AF37" />
-            <Text style={styles.countdownLabel}>Embarquement dans</Text>
-            <Text style={styles.countdownValue}>{formatTimeRemaining(flightInfo.boardingTime)}</Text>
+            <View style={styles.countdownIcon}>
+              <MaterialCommunityIcons name="timer-sand" size={22} color="#D4AF37" />
+            </View>
+            <View style={styles.countdownText}>
+              <Text style={styles.countdownLabel}>Embarquement dans</Text>
+              <Text style={styles.countdownValue}>{formatTimeRemaining(flightInfo.boardingTime)}</Text>
+            </View>
+            <View style={styles.countdownProgress}>
+              <View style={styles.countdownProgressBar} />
+            </View>
           </Animated.View>
         )}
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
-        {/* Smart Assistant Banner */}
-        <TouchableOpacity
-          style={styles.smartBanner}
-          onPress={() => setShowSmartAssistant(true)}
-          activeOpacity={0.9}
-        >
-          <View style={styles.smartBannerLeft}>
-            <View style={styles.smartIcon}>
-              <MaterialCommunityIcons name="robot-happy" size={28} color="#B22222" />
-            </View>
-            <View>
-              <View style={styles.smartTitleRow}>
-                <Text style={styles.smartTitle}>Smart Assistant</Text>
-                <View style={styles.liveBadge}>
-                  <View style={styles.liveDot} />
-                  <Text style={styles.liveText}>LIVE</Text>
-                </View>
+        {/* Smart Assistant Card */}
+        <Animated.View style={{ transform: [{ translateY: floatAnim }] }}>
+          <TouchableOpacity
+            style={styles.smartCard}
+            onPress={() => setShowSmartAssistant(true)}
+            activeOpacity={0.9}
+          >
+            <View style={styles.smartGlow} />
+            <View style={styles.smartContent}>
+              <View style={styles.smartIcon}>
+                <MaterialCommunityIcons name="robot-happy" size={32} color="#B22222" />
+                <View style={styles.smartPulse} />
               </View>
-              <Text style={styles.smartSubtitle}>
-                {securityInfo ? `${securityInfo.name}: ${securityInfo.currentWaitTime} min` : 'Analyse IA en temps réel'}
-              </Text>
+              <View style={styles.smartText}>
+                <View style={styles.smartTitleRow}>
+                  <Text style={styles.smartTitle}>Smart Assistant</Text>
+                  <View style={styles.aiBadge}>
+                    <Text style={styles.aiBadgeText}>IA</Text>
+                  </View>
+                </View>
+                <Text style={styles.smartSubtitle}>
+                  {securityInfo ? `🛡️ ${securityInfo.name}: ${securityInfo.currentWaitTime} min` : 'Analyse temps réel'}
+                </Text>
+              </View>
             </View>
-          </View>
-          <View style={styles.smartArrow}>
-            <MaterialCommunityIcons name="chevron-right" size={24} color="#B22222" />
-          </View>
-        </TouchableOpacity>
+            <View style={styles.smartArrow}>
+              <MaterialCommunityIcons name="arrow-right" size={22} color="#B22222" />
+            </View>
+          </TouchableOpacity>
+        </Animated.View>
 
-        {/* Quick Stats */}
-        <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <View style={[styles.statIcon, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
-              <MaterialCommunityIcons name="shield-check" size={22} color="#10B981" />
-            </View>
-            <Text style={styles.statValue}>{securityInfo?.currentWaitTime || '--'}</Text>
-            <Text style={styles.statLabel}>min sécurité</Text>
+        {/* Stats Grid */}
+        <View style={styles.statsGrid}>
+          <View style={[styles.statCard, styles.statCardPrimary]}>
+            <MaterialCommunityIcons name="shield-check" size={28} color="#fff" />
+            <Text style={styles.statValueWhite}>{securityInfo?.currentWaitTime || '--'}</Text>
+            <Text style={styles.statLabelWhite}>min sécurité</Text>
           </View>
           <View style={styles.statCard}>
-            <View style={[styles.statIcon, { backgroundColor: 'rgba(212, 175, 55, 0.15)' }]}>
-              <MaterialCommunityIcons name="star-circle" size={22} color="#D4AF37" />
+            <View style={[styles.statIconBox, { backgroundColor: 'rgba(212, 175, 55, 0.15)' }]}>
+              <MaterialCommunityIcons name="crown" size={24} color="#D4AF37" />
             </View>
             <Text style={styles.statValue}>Gold</Text>
-            <Text style={styles.statLabel}>Statut</Text>
+            <Text style={styles.statLabel}>Statut VIP</Text>
           </View>
           <View style={styles.statCard}>
-            <View style={[styles.statIcon, { backgroundColor: 'rgba(178, 34, 34, 0.1)' }]}>
-              <MaterialCommunityIcons name="bag-checked" size={22} color="#B22222" />
+            <View style={[styles.statIconBox, { backgroundColor: 'rgba(46, 125, 50, 0.1)' }]}>
+              <MaterialCommunityIcons name="bag-checked" size={24} color="#2E7D32" />
             </View>
             <Text style={styles.statValue}>1</Text>
             <Text style={styles.statLabel}>Bagage</Text>
           </View>
         </View>
 
-        {/* Section Title */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Outils</Text>
-          <View style={styles.sectionLine} />
-        </View>
-
-        {/* Feature Cards - 2x2 Grid */}
-        <View style={styles.featuresGrid}>
+        {/* Quick Actions */}
+        <Text style={styles.sectionTitle}>Outils</Text>
+        <View style={styles.actionsGrid}>
           <TouchableOpacity
-            style={styles.featureCard}
+            style={styles.actionCard}
             onPress={() => router.push('/scan')}
             activeOpacity={0.85}
           >
-            <View style={[styles.featureIcon, { backgroundColor: 'rgba(178, 34, 34, 0.08)' }]}>
-              <MaterialCommunityIcons name="qrcode-scan" size={32} color="#B22222" />
+            <View style={[styles.actionGradient, { backgroundColor: '#B22222' }]}>
+              <MaterialCommunityIcons name="qrcode-scan" size={36} color="#fff" />
             </View>
-            <Text style={styles.featureTitle}>Scanner</Text>
-            <Text style={styles.featureDesc}>QR Code bagage</Text>
+            <Text style={styles.actionTitle}>Scanner</Text>
+            <Text style={styles.actionDesc}>QR Code</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.featureCard}
+            style={styles.actionCard}
             onPress={() => router.push('/measure')}
             activeOpacity={0.85}
           >
-            <View style={[styles.featureIcon, { backgroundColor: 'rgba(21, 101, 192, 0.08)' }]}>
-              <MaterialCommunityIcons name="ruler-square" size={32} color="#1565C0" />
+            <View style={[styles.actionGradient, { backgroundColor: '#1565C0' }]}>
+              <MaterialCommunityIcons name="ruler-square" size={36} color="#fff" />
             </View>
-            <Text style={styles.featureTitle}>Mesurer</Text>
-            <Text style={styles.featureDesc}>Dimensions valise</Text>
+            <Text style={styles.actionTitle}>Mesurer</Text>
+            <Text style={styles.actionDesc}>Dimensions</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.featureCard}
+            style={styles.actionCard}
             onPress={() => router.push('/weight')}
             activeOpacity={0.85}
           >
-            <View style={[styles.featureIcon, { backgroundColor: 'rgba(212, 175, 55, 0.12)' }]}>
-              <MaterialCommunityIcons name="scale" size={32} color="#D4AF37" />
+            <View style={[styles.actionGradient, { backgroundColor: '#D4AF37' }]}>
+              <MaterialCommunityIcons name="scale" size={36} color="#fff" />
             </View>
-            <Text style={styles.featureTitle}>Peser</Text>
-            <Text style={styles.featureDesc}>Estimation poids</Text>
+            <Text style={styles.actionTitle}>Peser</Text>
+            <Text style={styles.actionDesc}>Estimation</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.featureCard}
+            style={styles.actionCard}
             onPress={() => router.push('/explore')}
             activeOpacity={0.85}
           >
-            <View style={[styles.featureIcon, { backgroundColor: 'rgba(46, 125, 50, 0.08)' }]}>
-              <MaterialCommunityIcons name="compass-outline" size={32} color="#2E7D32" />
+            <View style={[styles.actionGradient, { backgroundColor: '#2E7D32' }]}>
+              <MaterialCommunityIcons name="compass" size={36} color="#fff" />
             </View>
-            <Text style={styles.featureTitle}>Explorer</Text>
-            <Text style={styles.featureDesc}>Services aéroport</Text>
+            <Text style={styles.actionTitle}>Services</Text>
+            <Text style={styles.actionDesc}>Aéroport</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Info Banner */}
-        <View style={styles.infoBanner}>
-          <MaterialCommunityIcons name="lightbulb-outline" size={20} color="#64748B" />
-          <Text style={styles.infoBannerText}>
-            Préparez vos bagages avant l'aéroport pour gagner du temps
-          </Text>
+        {/* Promo Banner */}
+        <View style={styles.promoBanner}>
+          <View style={styles.promoIcon}>
+            <MaterialCommunityIcons name="gift" size={24} color="#D4AF37" />
+          </View>
+          <View style={styles.promoText}>
+            <Text style={styles.promoTitle}>Offre Lounge Atlas</Text>
+            <Text style={styles.promoDesc}>-25% aujourd'hui sur votre accès VIP</Text>
+          </View>
+          <TouchableOpacity style={styles.promoButton}>
+            <Text style={styles.promoButtonText}>Voir</Text>
+          </TouchableOpacity>
         </View>
 
       </ScrollView>
@@ -267,7 +349,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F2F4F6',
+    backgroundColor: '#F8FAFC',
   },
   header: {
     backgroundColor: '#B22222',
@@ -276,14 +358,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     overflow: 'hidden',
   },
-  headerGlow: {
+  headerPattern: {
     position: 'absolute',
-    top: -80,
-    right: -80,
-    width: 200,
-    height: 200,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  patternCircle: {
+    position: 'absolute',
     borderRadius: 100,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#fff',
   },
   headerTop: {
     flexDirection: 'row',
@@ -297,206 +382,297 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   logoBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: 48,
+    height: 48,
+    borderRadius: 16,
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
   brandName: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.7)',
-    letterSpacing: 0.5,
+    fontSize: 10,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.8)',
+    letterSpacing: 1.5,
   },
   appName: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: '900',
     color: '#fff',
-    letterSpacing: -0.3,
+    letterSpacing: -0.5,
   },
   clockBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
+    gap: 8,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 14,
+  },
+  clockDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#4ADE80',
   },
   clockText: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '800',
     color: '#fff',
     fontVariant: ['tabular-nums'],
   },
   flightCard: {
     backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 20,
+    padding: 18,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    backdropFilter: 'blur(10px)',
+  },
+  flightHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  flightLeft: {},
-  flightLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.6)',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 4,
-  },
-  flightRow: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    marginBottom: 16,
   },
-  flightNumber: {
-    fontSize: 24,
-    fontWeight: '900',
-    color: '#fff',
+  flightBadge: {
+    backgroundColor: 'rgba(212,175,55,0.3)',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 8,
   },
-  flightDest: {
-    fontSize: 20,
+  flightBadgeText: {
+    fontSize: 10,
     fontWeight: '800',
     color: '#D4AF37',
+    letterSpacing: 1,
   },
-  flightDestFull: {
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#4ADE80',
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#4ADE80',
+  },
+  flightMain: {},
+  flightRoute: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 18,
+  },
+  cityBox: {},
+  cityCode: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#fff',
+    letterSpacing: -1,
+  },
+  cityName: {
     fontSize: 12,
     fontWeight: '500',
-    color: 'rgba(255,255,255,0.75)',
-    marginTop: 4,
+    color: 'rgba(255,255,255,0.7)',
+    marginTop: 2,
   },
-  flightRight: {
+  routeLine: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingHorizontal: 15,
   },
-  gateLabel: {
+  routeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+  },
+  routeDash: {
+    flex: 1,
+    height: 2,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    marginHorizontal: 4,
+  },
+  routePlane: {
+    transform: [{ rotate: '90deg' }],
+    marginHorizontal: 8,
+  },
+  flightDetails: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    borderRadius: 12,
+    padding: 14,
+  },
+  flightDetail: {
+    alignItems: 'center',
+  },
+  detailLabel: {
     fontSize: 9,
     fontWeight: '600',
     color: 'rgba(255,255,255,0.6)',
-    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
   },
-  gateValue: {
-    fontSize: 28,
+  detailValue: {
+    fontSize: 18,
     fontWeight: '900',
     color: '#fff',
   },
-  terminalText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.7)',
+  gateValue: {
+    color: '#D4AF37',
   },
   countdownCard: {
+    backgroundColor: 'rgba(212,175,55,0.2)',
+    borderRadius: 16,
+    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    backgroundColor: 'rgba(212, 175, 55, 0.2)',
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+    gap: 14,
     borderWidth: 1,
-    borderColor: 'rgba(212, 175, 55, 0.3)',
+    borderColor: 'rgba(212,175,55,0.4)',
+  },
+  countdownIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: 'rgba(212,175,55,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  countdownText: {
+    flex: 1,
   },
   countdownLabel: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.9)',
+    color: 'rgba(255,255,255,0.8)',
   },
   countdownValue: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '900',
     color: '#D4AF37',
+    marginTop: 2,
+  },
+  countdownProgress: {
+    width: 4,
+    height: 40,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  countdownProgressBar: {
+    width: '100%',
+    height: '60%',
+    backgroundColor: '#D4AF37',
+    borderRadius: 2,
   },
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 32,
   },
-  smartBanner: {
+  smartCard: {
     backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 18,
+    borderRadius: 24,
+    padding: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     marginBottom: 20,
     shadowColor: '#B22222',
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 8,
     borderWidth: 2,
-    borderColor: 'rgba(178, 34, 34, 0.1)',
+    borderColor: 'rgba(178, 34, 34, 0.08)',
+    overflow: 'hidden',
   },
-  smartBannerLeft: {
+  smartGlow: {
+    position: 'absolute',
+    top: -30,
+    right: -30,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(178, 34, 34, 0.05)',
+  },
+  smartContent: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    gap: 16,
   },
   smartIcon: {
-    width: 54,
-    height: 54,
-    borderRadius: 16,
+    width: 60,
+    height: 60,
+    borderRadius: 18,
     backgroundColor: 'rgba(178, 34, 34, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  smartPulse: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#4ADE80',
+    borderWidth: 3,
+    borderColor: '#fff',
+  },
+  smartText: {},
   smartTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
   smartTitle: {
-    fontSize: 17,
+    fontSize: 19,
     fontWeight: '800',
     color: '#1E293B',
   },
-  liveBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+  aiBadge: {
+    backgroundColor: '#B22222',
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 8,
+    borderRadius: 6,
   },
-  liveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#10B981',
-  },
-  liveText: {
-    fontSize: 9,
+  aiBadgeText: {
+    fontSize: 10,
     fontWeight: '800',
-    color: '#10B981',
-    letterSpacing: 0.3,
+    color: '#fff',
+    letterSpacing: 0.5,
   },
   smartSubtitle: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '500',
     color: '#64748B',
-    marginTop: 2,
+    marginTop: 4,
   },
   smartArrow: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     backgroundColor: 'rgba(178, 34, 34, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  statsRow: {
+  statsGrid: {
     flexDirection: 'row',
     gap: 10,
     marginBottom: 24,
@@ -504,27 +680,37 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     backgroundColor: '#fff',
-    borderRadius: 16,
-    paddingVertical: 16,
+    borderRadius: 18,
+    paddingVertical: 20,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
   },
-  statIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+  statCardPrimary: {
+    backgroundColor: '#B22222',
+  },
+  statIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
   },
   statValue: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: '900',
     color: '#1E293B',
+    marginTop: 8,
+  },
+  statValueWhite: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#fff',
+    marginTop: 8,
   },
   statLabel: {
     fontSize: 11,
@@ -532,76 +718,98 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     marginTop: 2,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 14,
-    gap: 12,
+  statLabelWhite: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 2,
   },
   sectionTitle: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '800',
     color: '#94A3B8',
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 1.5,
+    marginBottom: 14,
   },
-  sectionLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E2E8F0',
-  },
-  featuresGrid: {
+  actionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
     marginBottom: 20,
   },
-  featureCard: {
+  actionCard: {
     width: (SCREEN_WIDTH - 52) / 2,
     backgroundColor: '#fff',
-    borderRadius: 20,
+    borderRadius: 22,
     padding: 20,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.06,
     shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
   },
-  featureIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 18,
+  actionGradient: {
+    width: 70,
+    height: 70,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 14,
   },
-  featureTitle: {
+  actionTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#1E293B',
     marginBottom: 2,
   },
-  featureDesc: {
+  actionDesc: {
     fontSize: 12,
     fontWeight: '500',
     color: '#94A3B8',
   },
-  infoBanner: {
+  promoBanner: {
+    backgroundColor: '#FEF3C7',
+    borderRadius: 18,
+    padding: 18,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    padding: 16,
+    gap: 14,
     borderWidth: 1,
-    borderColor: '#E8ECF0',
+    borderColor: '#FDE68A',
   },
-  infoBannerText: {
+  promoIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: 'rgba(212,175,55,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  promoText: {
     flex: 1,
-    fontSize: 13,
+  },
+  promoTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#92400E',
+  },
+  promoDesc: {
+    fontSize: 12,
     fontWeight: '500',
-    color: '#64748B',
-    lineHeight: 19,
+    color: '#B45309',
+    marginTop: 2,
+  },
+  promoButton: {
+    backgroundColor: '#D4AF37',
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  promoButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#fff',
   },
 });
