@@ -1,4 +1,6 @@
 import RequireAuth from '@/components/RequireAuth';
+import { usePassenger } from '@/context/PassengerContext';
+import { addBaggageClaim } from '@/data/claimsStorage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useMemo, useState } from 'react';
@@ -23,16 +25,19 @@ type LostBaggageForm = {
 };
 
 export default function BaggageLostScreen() {
+  const { passenger } = usePassenger();
+  const [submitting, setSubmitting] = useState(false);
+  const [successClaimId, setSuccessClaimId] = useState<string | null>(null);
   const [form, setForm] = useState<LostBaggageForm>({
     firstName: '',
     lastName: '',
     email: '',
     phone: '',
     address: '',
-    flightNumber: '',
+    flightNumber: passenger.flightNumber || '',
     flightDate: '',
-    departureAirport: '',
-    arrivalAirport: '',
+    departureAirport: 'CMN',
+    arrivalAirport: passenger.destinationCode || '',
     baggageTagNumber: '',
     baggageDescription: '',
     contentsSummary: '',
@@ -57,17 +62,28 @@ export default function BaggageLostScreen() {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const submit = () => {
+  const submit = async () => {
     if (requiredMissing.length > 0) {
       Alert.alert('Champs requis', `Merci de compléter: ${requiredMissing.join(', ')}`);
       return;
     }
 
-    Alert.alert(
-      'Réclamation envoyée',
-      "Votre déclaration de bagage perdu a été enregistrée. Conservez votre référence et surveillez vos emails.",
-      [{ text: 'OK', onPress: () => router.back() }]
-    );
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const claim = await addBaggageClaim({
+        type: 'lost',
+        passengerName: passenger.passengerName,
+        flightNumber: form.flightNumber,
+        baggageTagNumber: form.baggageTagNumber,
+        payload: { ...form },
+      });
+      setSuccessClaimId(claim.id);
+    } catch {
+      Alert.alert('Erreur', 'Impossible d\'envoyer la réclamation. Veuillez réessayer.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -83,6 +99,28 @@ export default function BaggageLostScreen() {
               <Text style={styles.subtitle}>Remplis ce formulaire pour déclarer un bagage manquant.</Text>
             </View>
           </View>
+
+          {successClaimId ? (
+            <View style={styles.successBanner}>
+              <View style={styles.successTop}>
+                <View style={styles.successIcon}>
+                  <MaterialCommunityIcons name="check" size={18} color="#fff" />
+                </View>
+                <View style={styles.successText}>
+                  <Text style={styles.successTitle}>Réclamation envoyée</Text>
+                  <Text style={styles.successSubtitle}>Référence: {successClaimId}</Text>
+                </View>
+              </View>
+              <View style={styles.successActions}>
+                <TouchableOpacity style={styles.successButton} onPress={() => router.push('/claims')} activeOpacity={0.85}>
+                  <Text style={styles.successButtonText}>Voir la liste</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.successButtonOutline} onPress={() => router.back()} activeOpacity={0.85}>
+                  <Text style={styles.successButtonOutlineText}>Retour</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : null}
 
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Coordonnées</Text>
@@ -187,9 +225,14 @@ export default function BaggageLostScreen() {
             />
           </View>
 
-          <TouchableOpacity style={styles.submitButton} onPress={submit} activeOpacity={0.9}>
+          <TouchableOpacity
+            style={[styles.submitButton, (submitting || !!successClaimId) && styles.submitButtonDisabled]}
+            onPress={submit}
+            activeOpacity={0.9}
+            disabled={submitting || !!successClaimId}
+          >
             <MaterialCommunityIcons name="send" size={18} color="#fff" />
-            <Text style={styles.submitText}>Envoyer la réclamation</Text>
+            <Text style={styles.submitText}>{submitting ? 'Envoi…' : successClaimId ? 'Réclamation envoyée' : 'Envoyer la réclamation'}</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -216,5 +259,18 @@ const styles = StyleSheet.create({
   choiceText: { fontSize: 14, fontWeight: '800', color: '#64748B' },
   choiceTextActive: { color: '#B22222' },
   submitButton: { flexDirection: 'row', gap: 10, backgroundColor: '#B22222', borderRadius: 16, paddingVertical: 16, alignItems: 'center', justifyContent: 'center', marginTop: 6 },
+  submitButtonDisabled: { backgroundColor: '#94A3B8' },
   submitText: { fontSize: 15, fontWeight: '800', color: '#fff' },
+
+  successBanner: { backgroundColor: '#ECFDF5', borderRadius: 18, padding: 14, borderWidth: 1, borderColor: '#A7F3D0', marginBottom: 12 },
+  successTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  successIcon: { width: 36, height: 36, borderRadius: 12, backgroundColor: '#10B981', alignItems: 'center', justifyContent: 'center' },
+  successText: { flex: 1 },
+  successTitle: { fontSize: 14, fontWeight: '900', color: '#065F46' },
+  successSubtitle: { marginTop: 3, fontSize: 12, fontWeight: '700', color: '#047857' },
+  successActions: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  successButton: { flex: 1, backgroundColor: '#10B981', borderRadius: 14, paddingVertical: 12, alignItems: 'center' },
+  successButtonText: { fontSize: 13, fontWeight: '900', color: '#fff' },
+  successButtonOutline: { flex: 1, borderWidth: 1, borderColor: '#10B981', borderRadius: 14, paddingVertical: 12, alignItems: 'center', backgroundColor: '#fff' },
+  successButtonOutlineText: { fontSize: 13, fontWeight: '900', color: '#10B981' },
 });

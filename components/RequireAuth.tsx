@@ -9,7 +9,21 @@ interface Props {
 }
 
 export default function RequireAuth({ children }: Props) {
-    const { passenger } = usePassenger();
+    const { passenger, hydrated } = usePassenger();
+
+    if (!hydrated) {
+        return (
+            <View style={styles.container}>
+                <View style={styles.content}>
+                    <View style={styles.iconBox}>
+                        <MaterialCommunityIcons name="progress-clock" size={48} color="#B22222" />
+                    </View>
+                    <Text style={styles.title}>Chargement</Text>
+                    <Text style={styles.subtitle}>Récupération de votre session…</Text>
+                </View>
+            </View>
+        );
+    }
 
     if (!passenger.isLoggedIn) {
         return (

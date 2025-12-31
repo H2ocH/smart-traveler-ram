@@ -93,7 +93,7 @@ const AVAILABLE_FLIGHTS = [
 ];
 
 export default function HomeScreen() {
-  const { passenger, setPassenger } = usePassenger();
+  const { passenger, setPassenger, logout, hydrated } = usePassenger();
   const [showSmartAssistant, setShowSmartAssistant] = useState(false);
   const [currentTime, setCurrentTime] = useState(getCurrentTime());
   const [flightInfo, setFlightInfo] = useState<any>(null);
@@ -163,8 +163,11 @@ export default function HomeScreen() {
     const flight = AVAILABLE_FLIGHTS.find(f => f.number.toUpperCase() === flightInput.toUpperCase());
     if (!flight) {
       // Vol non trouvé, on le crée dynamiquement
+      const generated = generateFlightForNumber(flightInput.toUpperCase());
       setPassenger({
         flightNumber: flightInput.toUpperCase(),
+        destination: generated.destination,
+        destinationCode: generated.destinationCode,
         passengerName: passengerName.trim(),
         seatNumber: `${Math.floor(Math.random() * 30) + 1}${['A', 'B', 'C', 'D', 'E', 'F'][Math.floor(Math.random() * 6)]}`,
         loyaltyTier: ['standard', 'silver', 'gold', 'platinum'][Math.floor(Math.random() * 4)] as any,
@@ -192,6 +195,22 @@ export default function HomeScreen() {
   };
 
   // Vue LOGIN si pas connecté
+  if (!hydrated) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
+        <View style={[styles.loginForm, { width: '100%', maxWidth: 360 }]}> 
+          <View style={{ alignItems: 'center', gap: 12 }}>
+            <View style={styles.logoCircle}>
+              <MaterialCommunityIcons name="progress-clock" size={40} color="#B22222" />
+            </View>
+            <Text style={styles.formTitle}>Chargement</Text>
+            <Text style={[styles.loginInfoText, { textAlign: 'center' }]}>Récupération de votre session…</Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
   if (!passenger.isLoggedIn) {
     return (
       <KeyboardAvoidingView
@@ -331,9 +350,14 @@ export default function HomeScreen() {
               <Text style={styles.passengerName}>{passenger.passengerName}</Text>
             </View>
           </View>
-          <View style={styles.clockBox}>
-            <View style={styles.clockDot} />
-            <Text style={styles.clockText}>{formatTimeWithSeconds(currentTime)}</Text>
+          <View style={styles.headerRight}>
+            <View style={styles.clockBox}>
+              <View style={styles.clockDot} />
+              <Text style={styles.clockText}>{formatTimeWithSeconds(currentTime)}</Text>
+            </View>
+            <TouchableOpacity style={styles.logoutButton} onPress={logout} activeOpacity={0.85}>
+              <MaterialCommunityIcons name="logout" size={18} color="#fff" />
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -535,9 +559,11 @@ const styles = StyleSheet.create({
   logoBox: { width: 46, height: 46, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
   welcomeText: { fontSize: 12, fontWeight: '500', color: 'rgba(255,255,255,0.7)' },
   passengerName: { fontSize: 18, fontWeight: '800', color: '#fff' },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   clockBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(0,0,0,0.2)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12 },
   clockDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#4ADE80' },
   clockText: { fontSize: 15, fontWeight: '800', color: '#fff', fontVariant: ['tabular-nums'] },
+  logoutButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.18)', alignItems: 'center', justifyContent: 'center' },
   flightCard: { backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 18, padding: 16, marginBottom: 12 },
   flightHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
   flightBadge: { backgroundColor: 'rgba(212,175,55,0.3)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },

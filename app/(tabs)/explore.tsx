@@ -1,6 +1,7 @@
 import RequireAuth from '@/components/RequireAuth';
 import { formatTimeWithSeconds, generateLounges, getCurrentTime, getWeatherConditions } from '@/data/airportDatabase';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -166,6 +167,14 @@ export default function ExploreScreen() {
           </View>
 
           <View style={styles.servicesGrid}>
+            <TouchableOpacity style={styles.serviceCard} activeOpacity={0.85} onPress={() => router.push('/claims')}>
+              <View style={[styles.serviceIcon, { backgroundColor: 'rgba(178, 34, 34, 0.1)' }]}>
+                <MaterialCommunityIcons name="clipboard-text" size={28} color="#B22222" />
+              </View>
+              <Text style={styles.serviceName}>Réclamations</Text>
+              <Text style={styles.serviceDesc}>Historique</Text>
+            </TouchableOpacity>
+
             <TouchableOpacity style={styles.serviceCard} activeOpacity={0.85}>
               <View style={[styles.serviceIcon, { backgroundColor: 'rgba(46, 125, 50, 0.1)' }]}>
                 <MaterialCommunityIcons name="help-circle" size={28} color="#2E7D32" />
