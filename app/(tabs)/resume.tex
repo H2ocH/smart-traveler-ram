@@ -1,0 +1,236 @@
+\documentclass[%singlesided,
+               doublesided,
+               paper=a4,
+               fontsize=10pt
+              ]{my-resume}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% set geometry
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\setlength\highlightwidth{8cm}
+\setlength\headerheight{4cm}            % note that margintop gets added to this value, i.e. the header bar is 5cm
+\setlength\marginleft{1cm}
+\setlength\marginright{\marginleft}      % needs to be 1.5 times to be actually equal. why?
+\setlength\margintop{1cm}
+\setlength\marginbottom{1cm}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% FONTS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\RequirePackage{fontspec}
+\setmainfont{Carlito}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% COLORS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\colorlet{highlightbarcolor}{lightgray}
+\colorlet{headerbarcolor}{darkgray}
+
+\colorlet{headerfontcolor}{white}
+\colorlet{accent}{awesome-red}
+\colorlet{heading}{black}
+\colorlet{emphasis}{black}
+\colorlet{body}{black}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% set document
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\begin{document}
+
+\name{Mehdi BOUJA}
+\tagline
+{
+
+Mon esprit créatif doublé de mes connaissances techniques et ma passion pour\\ les nouvelles technologies et les problèmes complexes font de moi un étudiant ingénieur aguerri qui a l'habitude de réagir et de prendre des décisions même sous une forte pression. \\ }
+\photo[round]{}{\dimexpr \headerheight-\marginbottom}   % make photo exactly match the header with margintop/marginright/marginbottom as margin
+
+\makeheader
+
+\highlightbar{
+
+    \section{Contact}
+    
+    \email{mehdibouja33@gmail.com}
+    \phone{+33 7 58 09 57 54}
+ 	 \location{78 avenue du Colonel Fabien,}
+    {93100  Montreuil}
+    \vspace{0.5em}
+    
+    \linkedin{Mehdi Bouja}{https://www.linkedin.com/in/mehdi-bouja-52b078159/}
+    
+    
+    \section{Compétences}
+    
+    \skillsection{Programmation}
+    \textbf{Python}\\
+   \textbf{ C/C++}\\
+    \textbf{VBA}\\
+    \textbf{VHDL}
+   
+    
+    \vspace{0.5em}
+    \skillsection{Systèmes d'Exploitation}
+    \textbf{Linux}\\
+    \textbf{MacOS}\\
+    \textbf{Windows}
+    
+    \vspace{0.5em}
+    \skillsection{Outils \& Logiciels}
+   \textbf{ROS}\\
+   \textbf{ Simulation}\\
+    (e.g. Matlab/Simulink)\\
+    \textbf{Conception}\\
+    (e.g. SolidWorks,KiCad,Spice,Labview)\\
+    \textbf{Office}
+    
+    \vspace{0.5em}
+    \skillsection{Compétences Relationnelles}
+    
+\begin{itemize}
+\item Résolution des problèmes.
+\item     Travail d'équipe.
+\item     Gestion du temps.
+\item Flexibilité et Adaptabilité.
+\end{itemize}
+    
+    \vspace{0.5em}
+    \skillsection{Langues}
+    \textbf{Arabe} : Langue maternelle\\
+    \textbf{Français} : Bilingue\\
+    \textbf{Anglais} : Avancé (TOEIC 920/990)\\
+    \textbf{Espagnol} : Basique
+      
+      \vspace{0.5em}
+     \skillsection{Intérêts}
+   	
+\begin{itemize}
+\item Football.
+\item Arts Martiaux (Kick-Boxing \& Taiekwondo).	
+\item Voyage.
+\end{itemize}
+   
+   \skillsection{A
+   utres}
+    
+\begin{itemize}
+\item Permis de conduire : Permis B
+\item     Habilitation éléctrique niveau BE
+\end{itemize}
+    
+    \bigskip
+    
+  
+}
+\mainbar{
+    \section[\faGears]{Experience}
+    \job{03/2022-Aujourd'hui}
+        {THALES SIX GTS, \textit{PALAISEAU}}
+        {Stage Ingénieur R\&D}
+        {
+\begin{itemize}
+\item \textbf{Sujet}:Localisation des Drones Via Fusion de Capteurs Lidar.
+\item \textbf{Objectif}:Développer une solution de localisation et de détection d'obstacles en fusionnant des données provenant de multiples capteurs lidar/caméras à champ de vision réduit.  \\
+\end{itemize}
+    
+}
+    \job{06/2021-08/2021}
+        {GIAA, \textit{MADRID}}
+        {Stage Ingénieur R\&D}
+        {
+\begin{itemize}
+\item \textbf{Sujet}:Les Problèmes d'Atterrissage des Drones.
+\item \textbf{Objectif}:Développer une solution au problème d'atterrissage des drones basée sur le traitement d'images et la vision par ordinateur . \\
+\end{itemize}
+
+
+
+    \job{06/2018-08/2018}
+        {MAHASOFT, \textit{AGADIR}}
+        {Assistant support informatique }
+        {
+\begin{itemize}
+\item \textbf{Objectif}:Traiter toute une série de documents, saisir des informations dans la base de données de l'entreprise et établir les devis.
+
+\end{itemize}
+}
+}
+    \section[\faMortarBoard]{Formation}
+    \job{09/2019 - 09/2022}
+        {Telecom Physique Strasbourg,\\ \textit{STRASBOURG}}
+        {Diplôme d'ingénieur généraliste}
+        {
+\begin{itemize}
+\item \textbf{Option}:Ingénierie des Systèmes, Automatique et Vision.
+\item \textbf{Cours pertinents}:Vision et commande, Robotique, Temps réel et systèmes embarqués, Réseaux industriels, Entrepreneuriat, Management d'équipe, Gestion financière.
+\end{itemize}
+}
+	 \job{09/2020 - 09/2022}
+        {Telecom Physique Strasbourg,\\ \textit{STRASBOURG}}
+        {Master IRIV}
+        {
+\begin{itemize}
+\item \textbf{Option}:Automatique et Robotique.
+\item \textbf{Cours pertinents}:Robotique mobile, Traitement d'images, Formation des images, Vision 3D, Optimisation.
+\end{itemize}
+}
+	 
+	 
+
+    \section{Projets}
+    \job{2019- 2020}
+        {Telecom Physique Strasbourg,\\ \textit{STRASBOURG}}
+        {Projet Ingénieur}
+        {
+\begin{itemize}
+\item \textbf{Objectif}:Reconstruction d'environnement par SLAM pour l'endoscopie flexible robotisée et commande des moteurs. 
+}
+
+\end{itemize}
+    \job{2021- 2022}
+        {Telecom Physique Strasbourg,\\ \textit{STRASBOURG}}
+        {Projet BIP}
+        {
+\begin{itemize}
+\item \textbf{Objectif}:Diagnostic des lésions cutanées à partir d'images dermoscopiques en utilisant des \\techniques de traitement d'images et d'IA.
+
+
+\end{itemize}
+    
+    
+    \job{2021- 2022}
+        {Telecom Physique Strasbourg,\\ \textit{STRASBOURG}}
+        {Hacking Industry Camp}
+        {
+\begin{itemize}
+\item \textbf{Objectif}:Détection et suivi des chantiers de construction à l'aide d'images satellites.
+         }
+
+\end{itemize}
+    
+    \job{2020- 2021}
+        {Telecom Physique Strasbourg,\\ \textit{STRASBOURG}}
+        {Projet MiBot}
+        {
+\begin{itemize}
+\item \textbf{Objectif} :Création d'un robot Segway afin de démontrer les capacités des nouveaux Circuits Intégrés de la société Allemande TRINAMIC lors des salons professionnels et dans des vidéos promotionnelles.
+}
+
+\end{itemize}
+
+    
+}
+    \medskip
+}
+\makebody
+\clearpage
+
+\end{document}
