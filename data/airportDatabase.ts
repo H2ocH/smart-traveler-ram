@@ -328,6 +328,72 @@ export const formatTimeWithSeconds = (date: Date): string => {
     return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 };
 
+// Génère un vol pour n'importe quel numéro de vol saisi
+export const generateFlightForNumber = (flightNumber: string): Flight => {
+    const now = getCurrentTime();
+    const timeSeed = Math.floor(now.getTime() / 10000);
+
+    // Créé un seed unique basé sur le numéro de vol
+    const flightSeed = flightNumber.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+
+    // Destinations possibles
+    const destinations = [
+        { name: 'Paris Charles de Gaulle', code: 'CDG' },
+        { name: 'Londres Heathrow', code: 'LHR' },
+        { name: 'New York JFK', code: 'JFK' },
+        { name: 'Dubai International', code: 'DXB' },
+        { name: 'Istanbul', code: 'IST' },
+        { name: 'Madrid Barajas', code: 'MAD' },
+        { name: 'Amsterdam Schiphol', code: 'AMS' },
+        { name: 'Rome Fiumicino', code: 'FCO' },
+        { name: 'Frankfurt', code: 'FRA' },
+        { name: 'Bruxelles', code: 'BRU' },
+    ];
+
+    const destIndex = flightSeed % destinations.length;
+    const dest = destinations[destIndex];
+
+    // Calcul des heures basées sur le vol
+    const baseOffset = 50 + (flightSeed % 60); // 50-110 minutes
+    const gates = ['A1', 'A5', 'B3', 'B12', 'C4', 'C8', 'D2', 'D10'];
+    const gate = gates[flightSeed % gates.length];
+    const terminal = flightSeed % 2 === 0 ? 'T1' : 'T2';
+
+    // Statuts possibles avec probabilités
+    const statusRand = seededRandom(timeSeed + flightSeed);
+    let status: Flight['status'] = 'scheduled';
+    let delay: number | undefined;
+    let newGate: string | undefined;
+
+    const timeToBoarding = baseOffset - 40;
+
+    if (timeToBoarding <= 0) {
+        status = 'boarding';
+    } else if (statusRand > 0.85) {
+        status = 'delayed';
+        delay = 15 + Math.floor(seededRandom(timeSeed + flightSeed + 1) * 30);
+    } else if (statusRand > 0.75) {
+        status = 'gate-change';
+        newGate = gates[(flightSeed + 3) % gates.length];
+    }
+
+    return {
+        id: `fl-${flightNumber}`,
+        flightNumber: flightNumber.toUpperCase(),
+        airline: 'RAM',
+        destination: dest.name,
+        destinationCode: dest.code,
+        scheduledDeparture: new Date(now.getTime() + baseOffset * 60000),
+        gate: gate,
+        terminal: terminal,
+        status: status,
+        delay: delay,
+        newGate: newGate,
+        boardingTime: new Date(now.getTime() + (baseOffset - 40) * 60000),
+        gateCloseTime: new Date(now.getTime() + (baseOffset - 10) * 60000),
+    };
+};
+
 // Obtient des conditions météo (change lentement)
 export const getWeatherConditions = (): { condition: string; impact: boolean; message: string } => {
     const now = getCurrentTime();
