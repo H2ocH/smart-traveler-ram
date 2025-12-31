@@ -1,21 +1,22 @@
+import RequireAuth from '@/components/RequireAuth';
+import { MaterialIcons } from '@expo/vector-icons';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import React, { useMemo, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
   Alert,
+  Animated,
   Image,
   Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { CameraView, useCameraPermissions } from 'expo-camera';
-import { MaterialIcons } from '@expo/vector-icons';
 import {
   PanGestureHandler,
   PinchGestureHandler,
   State,
 } from 'react-native-gesture-handler';
-import { Animated } from 'react-native';
 
 type Point = { x: number; y: number };
 
@@ -40,7 +41,7 @@ function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
-export default function MeasureScreen() {
+function MeasureScreenContent() {
   const cameraRef = useRef<CameraView>(null);
   const [permission, requestPermission] = useCameraPermissions();
 
@@ -525,3 +526,11 @@ const styles = StyleSheet.create({
   },
   ghostText: { fontWeight: '900', color: '#111' },
 });
+
+export default function MeasureScreen() {
+  return (
+    <RequireAuth>
+      <MeasureScreenContent />
+    </RequireAuth>
+  );
+}

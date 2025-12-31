@@ -1,20 +1,20 @@
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
-  ScrollView,
-  Vibration,
-  Modal,
-  TextInput,
-} from 'react-native';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import RequireAuth from '@/components/RequireAuth';
 import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Image } from 'react-native'; // ✅ ajoute ceci
-export default function QRScannerScreen() {
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  Vibration,
+  View
+} from 'react-native';
+
+function QRScannerScreenContent() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [scanHistory, setScanHistory] = useState([]);
@@ -23,7 +23,7 @@ export default function QRScannerScreen() {
   const [maysPoints, setMaysPoints] = useState(0);
   const [recoveryModalVisible, setRecoveryModalVisible] = useState(false);
   const [recoveryCode, setRecoveryCode] = useState('');
-  
+
   const scanTimeoutRef = useRef(null);
   const lastScannedCodeRef = useRef('');
   const lastScanTimeRef = useRef(0);
@@ -33,7 +33,7 @@ export default function QRScannerScreen() {
     if (!permission) {
       requestPermission();
     }
-    
+
     return () => {
       if (scanTimeoutRef.current) {
         clearTimeout(scanTimeoutRef.current);
@@ -69,31 +69,31 @@ export default function QRScannerScreen() {
   const handleBarCodeScanned = (scanningResult) => {
     const now = Date.now();
     const timeSinceLastScan = now - lastScanTimeRef.current;
-    
+
     if (timeSinceLastScan < 3000) {
       return;
     }
-    
+
     if (scanningResult.data === lastScannedCodeRef.current && timeSinceLastScan < 5000) {
       return;
     }
-    
+
     if (scanned) return;
-    
+
     setScanned(true);
     Vibration.vibrate();
-    
+
     lastScannedCodeRef.current = scanningResult.data;
     lastScanTimeRef.current = now;
-    
+
     console.log('QR Code scanné:', scanningResult.data);
-    
+
     try {
       const qrData = JSON.parse(scanningResult.data);
       processQRCode(qrData);
     } catch (error) {
       Alert.alert(
-        'Format non reconnu', 
+        'Format non reconnu',
         'Le QR code doit être au format JSON.'
       );
       resetScanner();
@@ -123,7 +123,7 @@ export default function QRScannerScreen() {
 
   const handleCheckInScan = async (data) => {
     const baggageId = data.baggageId;
-    
+
     if (!baggageId) {
       Alert.alert('QR invalide', 'ID de bagage manquant dans le QR code.');
       resetScanner();
@@ -133,7 +133,7 @@ export default function QRScannerScreen() {
     const existingBaggage = baggages.find(b => b.id === baggageId);
     if (existingBaggage) {
       Alert.alert(
-        'Bagage déjà enregistré', 
+        'Bagage déjà enregistré',
         `Le bagage ${baggageId} est déjà enregistré.`
       );
       resetScanner();
@@ -149,11 +149,11 @@ export default function QRScannerScreen() {
       checkoutTime: null,
       originalData: data
     };
-    
+
     setBaggages(prev => [...prev, newBaggage]);
-    
+
     await earnMays(10);
-    
+
     Alert.alert(
       '✅ Check-in Réussi',
       `Bagage ${newBaggage.id} enregistré pour ${newBaggage.passengerName}\n\n+10 Mays! 🎉`,
@@ -163,7 +163,7 @@ export default function QRScannerScreen() {
 
   const handleCheckOutScan = async (data) => {
     const baggageId = data.baggageId;
-    
+
     if (!baggageId) {
       Alert.alert('QR invalide', 'ID de bagage manquant dans le QR code.');
       resetScanner();
@@ -171,10 +171,10 @@ export default function QRScannerScreen() {
     }
 
     const baggage = baggages.find(b => b.id === baggageId);
-    
+
     if (!baggage) {
       Alert.alert(
-        'Bagage non trouvé', 
+        'Bagage non trouvé',
         `Aucun bagage trouvé avec l'ID ${baggageId}.\nVeuillez d'abord effectuer le check-in.`
       );
       resetScanner();
@@ -183,7 +183,7 @@ export default function QRScannerScreen() {
 
     if (baggage.status === 'checked_out') {
       Alert.alert(
-        'Déjà livré', 
+        'Déjà livré',
         `Ce bagage a déjà été remis au passager le ${baggage.checkoutTime}.`
       );
       resetScanner();
@@ -191,23 +191,23 @@ export default function QRScannerScreen() {
     }
 
     const isMatch = compareWithCheckinData(baggage, data);
-    
+
     if (isMatch) {
-      const updatedBaggages = baggages.map(b => 
-        b.id === baggageId 
-          ? { 
-              ...b, 
-              status: 'checked_out', 
-              checkoutTime: new Date().toLocaleString('fr-FR'),
-              checkoutData: data
-            }
+      const updatedBaggages = baggages.map(b =>
+        b.id === baggageId
+          ? {
+            ...b,
+            status: 'checked_out',
+            checkoutTime: new Date().toLocaleString('fr-FR'),
+            checkoutData: data
+          }
           : b
       );
-      
+
       setBaggages(updatedBaggages);
-      
+
       await earnMays(15);
-      
+
       Alert.alert(
         '✅ Check-out Réussi',
         `Bagage ${baggageId} validé pour ${baggage.passengerName}\n\nLes données correspondent ✅\n\n+15 Mays! 🎉`,
@@ -215,7 +215,7 @@ export default function QRScannerScreen() {
       );
     } else {
       Alert.alert(
-        '⚠️ Données incompatibles', 
+        '⚠️ Données incompatibles',
         `Les données scannées ne correspondent pas à l'enregistrement check-in.\n\nVeuillez vérifier le bagage.`,
         [{ text: 'OK', onPress: resetScanner }]
       );
@@ -224,29 +224,29 @@ export default function QRScannerScreen() {
 
   const compareWithCheckinData = (baggage, checkoutData) => {
     const checkinData = baggage.originalData;
-    
+
     if (checkoutData.baggageId !== baggage.id) {
       return false;
     }
-    
+
     if (checkoutData.passengerName && checkinData.passengerName) {
       const normalizedCheckoutName = checkoutData.passengerName.trim().toLowerCase();
       const normalizedCheckinName = checkinData.passengerName.trim().toLowerCase();
-      
+
       if (normalizedCheckoutName !== normalizedCheckinName) {
         return false;
       }
     }
-    
+
     if (checkoutData.flightNumber && checkinData.flightNumber) {
       const normalizedCheckoutFlight = checkoutData.flightNumber.trim().toUpperCase();
       const normalizedCheckinFlight = checkinData.flightNumber.trim().toUpperCase();
-      
+
       if (normalizedCheckoutFlight !== normalizedCheckinFlight) {
         return false;
       }
     }
-    
+
     return true;
   };
 
@@ -268,16 +268,16 @@ export default function QRScannerScreen() {
       // Simulation de vérification du code de récupération
       // En réalité, vous devriez vérifier ce code avec votre backend
       const isValidRecoveryCode = await validateRecoveryCode(recoveryCode);
-      
+
       if (isValidRecoveryCode) {
         const recoveredPoints = 50; // Points à récupérer
         await earnMays(recoveredPoints);
-        
+
         Alert.alert(
           '✅ Mays Récupérés !',
           `Vous avez récupéré ${recoveredPoints} Mays !\n\nVotre solde actuel: ${maysPoints + recoveredPoints} Mays`
         );
-        
+
         setRecoveryModalVisible(false);
         setRecoveryCode('');
       } else {
@@ -310,7 +310,7 @@ export default function QRScannerScreen() {
             setMaysPoints(0);
             lastScannedCodeRef.current = '';
             lastScanTimeRef.current = 0;
-            
+
             try {
               await AsyncStorage.removeItem('maysPoints');
             } catch (error) {
@@ -326,7 +326,7 @@ export default function QRScannerScreen() {
     const checkedIn = baggages.filter(b => b.status === 'checked_in').length;
     const checkedOut = baggages.filter(b => b.status === 'checked_out').length;
     const total = baggages.length;
-    
+
     return { checkedIn, checkedOut, total };
   };
 
@@ -356,14 +356,14 @@ export default function QRScannerScreen() {
       <Text style={styles.title}>📦 Suivi des Bagages</Text>
 
       {/* SUPPRIMÉ : Section Mays avec bouton de récupération */}
-      
+
       {/* SUPPRIMÉ : Modal de récupération des Mays */}
 
       {/* Sélecteur de mode */}
       <View style={styles.modeSelector}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[
-            styles.modeButton, 
+            styles.modeButton,
             currentMode === 'checkin' && styles.modeButtonActive
           ]}
           onPress={() => setCurrentMode('checkin')}
@@ -375,9 +375,9 @@ export default function QRScannerScreen() {
             Check-in
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[
-            styles.modeButton, 
+            styles.modeButton,
             currentMode === 'checkout' && styles.modeButtonActive
           ]}
           onPress={() => setCurrentMode('checkout')}
@@ -400,8 +400,8 @@ export default function QRScannerScreen() {
           {currentMode === 'checkin' ? '📥 Mode Check-in' : '📤 Mode Check-out'}
         </Text>
         <Text style={styles.modeDescription}>
-          {currentMode === 'checkin' 
-            ? 'Scannez le QR code pour enregistrer un nouveau bagage' 
+          {currentMode === 'checkin'
+            ? 'Scannez le QR code pour enregistrer un nouveau bagage'
             : 'Scannez le QR code pour vérifier et valider la récupération'}
         </Text>
       </View>
@@ -504,7 +504,7 @@ export default function QRScannerScreen() {
           <Text style={styles.historyTitle}>📋 Historique des Scans</Text>
           <Text style={styles.historyCount}>({scanHistory.length})</Text>
         </View>
-        
+
         <View style={styles.historyList}>
           {scanHistory.map((scan) => (
             <View key={scan.id} style={styles.scanItem}>
@@ -531,11 +531,11 @@ export default function QRScannerScreen() {
         </View>
       </View>
       <View style={styles.logoContainer}>
-       <Image
-        source={require('../../assets/images/logo.jpg')}
-    style={styles.logo}
-    resizeMode="contain"/>
-    </View>
+        <Image
+          source={require('../../assets/images/logo.jpg')}
+          style={styles.logo}
+          resizeMode="contain" />
+      </View>
 
     </ScrollView>
   );
@@ -548,7 +548,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     paddingBottom: 20,
-      paddingTop: 30, 
+    paddingTop: 30,
   },
   title: {
     fontSize: 24,
@@ -605,17 +605,17 @@ const styles = StyleSheet.create({
   modeDescription: {
     fontSize: 12,
     color: '#666',
-  },logoContainer: {
-  position: 'absolute',
-  top: 37,
-  right: 10,
-  zIndex: 10,
-},
-logo: {
-  width: 50,
-  height: 50,
-  borderRadius: 8,
-},
+  }, logoContainer: {
+    position: 'absolute',
+    top: 37,
+    right: 10,
+    zIndex: 10,
+  },
+  logo: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+  },
 
   statsContainer: {
     flexDirection: 'row',
@@ -880,3 +880,11 @@ logo: {
 
 
 });
+
+export default function QRScannerScreen() {
+  return (
+    <RequireAuth>
+      <QRScannerScreenContent />
+    </RequireAuth>
+  );
+}

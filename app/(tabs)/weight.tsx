@@ -1,3 +1,4 @@
+import RequireAuth from '@/components/RequireAuth';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -17,8 +18,8 @@ const ITEMS: Item[] = [
   { id: 'tshirt', label: 'T-shirt', grams: 180, category: 'Vêtements', icon: 'tshirt-crew' },
   { id: 'hoodie', label: 'Sweat / Hoodie', grams: 550, category: 'Vêtements', icon: 'tshirt-crew' },
   { id: 'jacket', label: 'Veste légère', grams: 650, category: 'Vêtements', icon: 'coat-rack' },
-  { id: 'socks', label: 'Paire de chaussettes', grams: 60, category: 'Vêtements', icon: 'socks' },
-  { id: 'underwear', label: 'Sous-vêtement', grams: 50, category: 'Vêtements', icon: 'tshirt-crew' },
+  { id: 'socks', label: 'Paire de chaussettes', grams: 60, category: 'Vêtements', icon: 'shoe-formal' },
+  { id: 'underwear', label: 'Sous-êtement', grams: 50, category: 'Vêtements', icon: 'tshirt-crew' },
   { id: 'shoes', label: 'Paire de chaussures', grams: 950, category: 'Vêtements', icon: 'shoe-sneaker' },
 
   // Liquides / toilette
@@ -30,18 +31,18 @@ const ITEMS: Item[] = [
   { id: 'towel_small', label: 'Serviette petite', grams: 300, category: 'Toiletries', icon: 'tumble-dryer' },
 
   // Tech
-  { id: 'laptop', label: 'PC portable', grams: 1500, category: 'Tech', icon: 'laptop' },
-  { id: 'tablet', label: 'Tablette', grams: 500, category: 'Tech', icon: 'tablet' },
-  { id: 'charger', label: 'Chargeur', grams: 150, category: 'Tech', icon: 'power-plug' },
-  { id: 'powerbank', label: 'Powerbank', grams: 260, category: 'Tech', icon: 'battery-charging' },
-  { id: 'headphones', label: 'Casque audio', grams: 220, category: 'Tech', icon: 'headphones' },
+  { id: 'laptop', label: 'Laptop 14"', grams: 1800, category: 'Tech', icon: 'laptop' },
+  { id: 'tablet', label: 'Tablette', grams: 600, category: 'Tech', icon: 'tablet' },
+  { id: 'phone', label: 'Téléphone', grams: 220, category: 'Tech', icon: 'cellphone' },
+  { id: 'charger', label: 'Chargeur', grams: 200, category: 'Tech', icon: 'power-plug' },
+  { id: 'headphones', label: 'Casque audio', grams: 300, category: 'Tech', icon: 'headphones' },
+  { id: 'camera', label: 'Appareil photo', grams: 700, category: 'Tech', icon: 'camera' },
 
   // Divers
-  { id: 'book', label: 'Livre', grams: 350, category: 'Divers', icon: 'book-open-variant' },
-  { id: 'water_empty', label: 'Gourde vide', grams: 200, category: 'Divers', icon: 'cup-water' },
-  { id: 'umbrella', label: 'Parapluie', grams: 320, category: 'Divers', icon: 'umbrella' },
-  { id: 'bag_empty', label: 'Valise (vide) cabine', grams: 2500, category: 'Divers', icon: 'bag-carry-on' },
-  { id: 'bag_empty_big', label: 'Valise (vide) soute', grams: 3500, category: 'Divers', icon: 'bag-suitcase' },
+  { id: 'book', label: 'Livre', grams: 400, category: 'Divers', icon: 'book-open-variant' },
+  { id: 'water_bottle', label: 'Gourde vide', grams: 180, category: 'Divers', icon: 'bottle-soda' },
+  { id: 'snacks', label: 'Snacks', grams: 200, category: 'Divers', icon: 'food-apple' },
+  { id: 'passport_wallet', label: 'Passeport + Portefeuille', grams: 150, category: 'Divers', icon: 'wallet' },
 ];
 
 const CABIN_LIMIT_KG = 8;
@@ -65,7 +66,7 @@ function formatKg(g: number) {
   return (g / 1000).toFixed(2);
 }
 
-export default function WeightEstimatorScreen() {
+function WeightEstimatorScreenContent() {
   const [qty, setQty] = useState<Record<string, number>>({});
 
   const grouped = useMemo(() => {
@@ -475,3 +476,11 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 });
+
+export default function WeightEstimatorScreen() {
+  return (
+    <RequireAuth>
+      <WeightEstimatorScreenContent />
+    </RequireAuth>
+  );
+}

@@ -1,3 +1,4 @@
+import RequireAuth from '@/components/RequireAuth';
 import { formatTimeWithSeconds, generateLounges, getCurrentTime, getWeatherConditions } from '@/data/airportDatabase';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
@@ -44,198 +45,200 @@ export default function ExploreScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header with gradient effect */}
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <View>
-            <Text style={styles.headerTitle}>Services</Text>
-            <Text style={styles.headerSubtitle}>Votre confort à l'aéroport</Text>
-          </View>
-          <View style={styles.clockBadge}>
-            <View style={styles.clockDot} />
-            <Text style={styles.clockText}>{formatTimeWithSeconds(currentTime)}</Text>
+    <RequireAuth>
+      <View style={styles.container}>
+        {/* Header with gradient effect */}
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <View>
+              <Text style={styles.headerTitle}>Services</Text>
+              <Text style={styles.headerSubtitle}>Votre confort à l'aéroport</Text>
+            </View>
+            <View style={styles.clockBadge}>
+              <View style={styles.clockDot} />
+              <Text style={styles.clockText}>{formatTimeWithSeconds(currentTime)}</Text>
+            </View>
           </View>
         </View>
-      </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
-        {/* Weather Card */}
-        {weather && (
-          <Animated.View style={[styles.weatherCard, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-            <View style={styles.weatherLeft}>
-              <View style={styles.weatherIconBox}>
-                <MaterialCommunityIcons
-                  name={getWeatherIcon(weather.condition)}
-                  size={36}
-                  color="#1565C0"
-                />
-              </View>
-              <View>
-                <Text style={styles.weatherTitle}>Météo CMN</Text>
-                <Text style={styles.weatherTemp}>24°C</Text>
-              </View>
-            </View>
-            <View style={styles.weatherRight}>
-              <Text style={styles.weatherDesc}>{weather.message}</Text>
-              {weather.impact && (
-                <View style={styles.weatherAlert}>
-                  <MaterialCommunityIcons name="alert" size={14} color="#F59E0B" />
-                  <Text style={styles.weatherAlertText}>Impact possible</Text>
-                </View>
-              )}
-            </View>
-          </Animated.View>
-        )}
-
-        {/* Lounges Section */}
-        <View style={styles.sectionHeader}>
-          <View style={styles.sectionIcon}>
-            <MaterialCommunityIcons name="sofa-single" size={18} color="#B22222" />
-          </View>
-          <Text style={styles.sectionTitle}>Salons VIP</Text>
-          <View style={styles.sectionLine} />
-        </View>
-
-        {lounges.map((lounge, index) => (
-          <Animated.View
-            key={lounge.id}
-            style={[
-              styles.loungeCard,
-              {
-                opacity: fadeAnim,
-                transform: [{ translateY: Animated.multiply(slideAnim, new Animated.Value(1 + index * 0.2)) }]
-              }
-            ]}
-          >
-            <TouchableOpacity activeOpacity={0.9} style={styles.loungeInner}>
-              {lounge.hasPromo && (
-                <View style={styles.loungePromoRibbon}>
-                  <Text style={styles.promoRibbonText}>-{lounge.promoDiscount}%</Text>
-                </View>
-              )}
-
-              <View style={styles.loungeTop}>
-                <View style={[
-                  styles.loungeIconBox,
-                  { backgroundColor: lounge.hasPromo ? 'rgba(212, 175, 55, 0.15)' : 'rgba(21, 101, 192, 0.08)' }
-                ]}>
+          {/* Weather Card */}
+          {weather && (
+            <Animated.View style={[styles.weatherCard, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+              <View style={styles.weatherLeft}>
+                <View style={styles.weatherIconBox}>
                   <MaterialCommunityIcons
-                    name="sofa-single"
-                    size={28}
-                    color={lounge.hasPromo ? '#D4AF37' : '#1565C0'}
+                    name={getWeatherIcon(weather.condition)}
+                    size={36}
+                    color="#1565C0"
                   />
                 </View>
-                <View style={styles.loungeInfo}>
-                  <Text style={styles.loungeName}>{lounge.name}</Text>
-                  <Text style={styles.loungeTerminal}>Terminal {lounge.terminal} • Casablanca CMN</Text>
-                </View>
-                <View style={styles.occupancyCircle}>
-                  <Text style={styles.occupancyValue}>{lounge.currentOccupancy}%</Text>
-                  <Text style={styles.occupancyLabel}>occupé</Text>
+                <View>
+                  <Text style={styles.weatherTitle}>Météo CMN</Text>
+                  <Text style={styles.weatherTemp}>24°C</Text>
                 </View>
               </View>
+              <View style={styles.weatherRight}>
+                <Text style={styles.weatherDesc}>{weather.message}</Text>
+                {weather.impact && (
+                  <View style={styles.weatherAlert}>
+                    <MaterialCommunityIcons name="alert" size={14} color="#F59E0B" />
+                    <Text style={styles.weatherAlertText}>Impact possible</Text>
+                  </View>
+                )}
+              </View>
+            </Animated.View>
+          )}
 
-              <View style={styles.loungeAmenities}>
-                {lounge.amenities.map((amenity: string, i: number) => (
-                  <View key={i} style={styles.amenityChip}>
+          {/* Lounges Section */}
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIcon}>
+              <MaterialCommunityIcons name="sofa-single" size={18} color="#B22222" />
+            </View>
+            <Text style={styles.sectionTitle}>Salons VIP</Text>
+            <View style={styles.sectionLine} />
+          </View>
+
+          {lounges.map((lounge, index) => (
+            <Animated.View
+              key={lounge.id}
+              style={[
+                styles.loungeCard,
+                {
+                  opacity: fadeAnim,
+                  transform: [{ translateY: Animated.multiply(slideAnim, new Animated.Value(1 + index * 0.2)) }]
+                }
+              ]}
+            >
+              <TouchableOpacity activeOpacity={0.9} style={styles.loungeInner}>
+                {lounge.hasPromo && (
+                  <View style={styles.loungePromoRibbon}>
+                    <Text style={styles.promoRibbonText}>-{lounge.promoDiscount}%</Text>
+                  </View>
+                )}
+
+                <View style={styles.loungeTop}>
+                  <View style={[
+                    styles.loungeIconBox,
+                    { backgroundColor: lounge.hasPromo ? 'rgba(212, 175, 55, 0.15)' : 'rgba(21, 101, 192, 0.08)' }
+                  ]}>
                     <MaterialCommunityIcons
-                      name={getAmenityIcon(amenity)}
-                      size={12}
-                      color="#64748B"
+                      name="sofa-single"
+                      size={28}
+                      color={lounge.hasPromo ? '#D4AF37' : '#1565C0'}
                     />
-                    <Text style={styles.amenityText}>{amenity}</Text>
                   </View>
-                ))}
-              </View>
-
-              <View style={styles.loungeBottom}>
-                <View style={styles.loungeCapacity}>
-                  <View style={styles.capacityBar}>
-                    <View style={[styles.capacityFill, { width: `${lounge.currentOccupancy}%` }]} />
+                  <View style={styles.loungeInfo}>
+                    <Text style={styles.loungeName}>{lounge.name}</Text>
+                    <Text style={styles.loungeTerminal}>Terminal {lounge.terminal} • Casablanca CMN</Text>
                   </View>
-                  <Text style={styles.capacityText}>
-                    {Math.round(lounge.maxCapacity * (1 - lounge.currentOccupancy / 100))} places disponibles
-                  </Text>
+                  <View style={styles.occupancyCircle}>
+                    <Text style={styles.occupancyValue}>{lounge.currentOccupancy}%</Text>
+                    <Text style={styles.occupancyLabel}>occupé</Text>
+                  </View>
                 </View>
-                <TouchableOpacity style={styles.bookButton}>
-                  <Text style={styles.bookButtonText}>Réserver</Text>
-                  <MaterialCommunityIcons name="arrow-right" size={16} color="#fff" />
-                </TouchableOpacity>
+
+                <View style={styles.loungeAmenities}>
+                  {lounge.amenities.map((amenity: string, i: number) => (
+                    <View key={i} style={styles.amenityChip}>
+                      <MaterialCommunityIcons
+                        name={getAmenityIcon(amenity)}
+                        size={12}
+                        color="#64748B"
+                      />
+                      <Text style={styles.amenityText}>{amenity}</Text>
+                    </View>
+                  ))}
+                </View>
+
+                <View style={styles.loungeBottom}>
+                  <View style={styles.loungeCapacity}>
+                    <View style={styles.capacityBar}>
+                      <View style={[styles.capacityFill, { width: `${lounge.currentOccupancy}%` }]} />
+                    </View>
+                    <Text style={styles.capacityText}>
+                      {Math.round(lounge.maxCapacity * (1 - lounge.currentOccupancy / 100))} places disponibles
+                    </Text>
+                  </View>
+                  <TouchableOpacity style={styles.bookButton}>
+                    <Text style={styles.bookButtonText}>Réserver</Text>
+                    <MaterialCommunityIcons name="arrow-right" size={16} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+              </TouchableOpacity>
+            </Animated.View>
+          ))}
+
+          {/* Services Grid */}
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIcon}>
+              <MaterialCommunityIcons name="apps" size={18} color="#B22222" />
+            </View>
+            <Text style={styles.sectionTitle}>Services</Text>
+            <View style={styles.sectionLine} />
+          </View>
+
+          <View style={styles.servicesGrid}>
+            <TouchableOpacity style={styles.serviceCard} activeOpacity={0.85}>
+              <View style={[styles.serviceIcon, { backgroundColor: 'rgba(46, 125, 50, 0.1)' }]}>
+                <MaterialCommunityIcons name="help-circle" size={28} color="#2E7D32" />
               </View>
+              <Text style={styles.serviceName}>Assistance</Text>
+              <Text style={styles.serviceDesc}>Support 24/7</Text>
             </TouchableOpacity>
-          </Animated.View>
-        ))}
 
-        {/* Services Grid */}
-        <View style={styles.sectionHeader}>
-          <View style={styles.sectionIcon}>
-            <MaterialCommunityIcons name="apps" size={18} color="#B22222" />
+            <TouchableOpacity style={styles.serviceCard} activeOpacity={0.85}>
+              <View style={[styles.serviceIcon, { backgroundColor: 'rgba(106, 27, 154, 0.1)' }]}>
+                <MaterialCommunityIcons name="star-circle" size={28} color="#6A1B9A" />
+              </View>
+              <Text style={styles.serviceName}>Fidélité</Text>
+              <Text style={styles.serviceDesc}>Safar Flyer</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.serviceCard} activeOpacity={0.85}>
+              <View style={[styles.serviceIcon, { backgroundColor: 'rgba(21, 101, 192, 0.1)' }]}>
+                <MaterialCommunityIcons name="map-marker" size={28} color="#1565C0" />
+              </View>
+              <Text style={styles.serviceName}>Plan</Text>
+              <Text style={styles.serviceDesc}>Aéroport</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.serviceCard} activeOpacity={0.85}>
+              <View style={[styles.serviceIcon, { backgroundColor: 'rgba(178, 34, 34, 0.1)' }]}>
+                <MaterialCommunityIcons name="phone" size={28} color="#B22222" />
+              </View>
+              <Text style={styles.serviceName}>Urgence</Text>
+              <Text style={styles.serviceDesc}>Contact</Text>
+            </TouchableOpacity>
           </View>
-          <Text style={styles.sectionTitle}>Services</Text>
-          <View style={styles.sectionLine} />
-        </View>
 
-        <View style={styles.servicesGrid}>
-          <TouchableOpacity style={styles.serviceCard} activeOpacity={0.85}>
-            <View style={[styles.serviceIcon, { backgroundColor: 'rgba(46, 125, 50, 0.1)' }]}>
-              <MaterialCommunityIcons name="help-circle" size={28} color="#2E7D32" />
+          {/* Contact Banner */}
+          <View style={styles.contactBanner}>
+            <View style={styles.contactIcon}>
+              <MaterialCommunityIcons name="headphones" size={24} color="#fff" />
             </View>
-            <Text style={styles.serviceName}>Assistance</Text>
-            <Text style={styles.serviceDesc}>Support 24/7</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.serviceCard} activeOpacity={0.85}>
-            <View style={[styles.serviceIcon, { backgroundColor: 'rgba(106, 27, 154, 0.1)' }]}>
-              <MaterialCommunityIcons name="star-circle" size={28} color="#6A1B9A" />
+            <View style={styles.contactText}>
+              <Text style={styles.contactTitle}>Besoin d'aide ?</Text>
+              <Text style={styles.contactNumber}>+212 522 529 000</Text>
             </View>
-            <Text style={styles.serviceName}>Fidélité</Text>
-            <Text style={styles.serviceDesc}>Safar Flyer</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.serviceCard} activeOpacity={0.85}>
-            <View style={[styles.serviceIcon, { backgroundColor: 'rgba(21, 101, 192, 0.1)' }]}>
-              <MaterialCommunityIcons name="map-marker" size={28} color="#1565C0" />
-            </View>
-            <Text style={styles.serviceName}>Plan</Text>
-            <Text style={styles.serviceDesc}>Aéroport</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.serviceCard} activeOpacity={0.85}>
-            <View style={[styles.serviceIcon, { backgroundColor: 'rgba(178, 34, 34, 0.1)' }]}>
-              <MaterialCommunityIcons name="phone" size={28} color="#B22222" />
-            </View>
-            <Text style={styles.serviceName}>Urgence</Text>
-            <Text style={styles.serviceDesc}>Contact</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Contact Banner */}
-        <View style={styles.contactBanner}>
-          <View style={styles.contactIcon}>
-            <MaterialCommunityIcons name="headphones" size={24} color="#fff" />
+            <TouchableOpacity style={styles.callButton}>
+              <MaterialCommunityIcons name="phone" size={20} color="#B22222" />
+            </TouchableOpacity>
           </View>
-          <View style={styles.contactText}>
-            <Text style={styles.contactTitle}>Besoin d'aide ?</Text>
-            <Text style={styles.contactNumber}>+212 522 529 000</Text>
-          </View>
-          <TouchableOpacity style={styles.callButton}>
-            <MaterialCommunityIcons name="phone" size={20} color="#B22222" />
-          </TouchableOpacity>
-        </View>
 
-        {/* Footer */}
-        <View style={styles.footer}>
-          <View style={styles.footerLogo}>
-            <MaterialCommunityIcons name="airplane" size={20} color="#CBD5E1" />
+          {/* Footer */}
+          <View style={styles.footer}>
+            <View style={styles.footerLogo}>
+              <MaterialCommunityIcons name="airplane" size={20} color="#CBD5E1" />
+            </View>
+            <Text style={styles.footerText}>Royal Air Maroc © 2025</Text>
+            <Text style={styles.footerVersion}>Smart Traveler v1.0</Text>
           </View>
-          <Text style={styles.footerText}>Royal Air Maroc © 2025</Text>
-          <Text style={styles.footerVersion}>Smart Traveler v1.0</Text>
-        </View>
 
-      </ScrollView>
-    </View>
+        </ScrollView>
+      </View>
+    </RequireAuth>
   );
 }
 
