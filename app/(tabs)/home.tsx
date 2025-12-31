@@ -1,26 +1,26 @@
 import SmartAssistantModal from '@/components/SmartAssistantModal';
 import { usePassenger } from '@/context/PassengerContext';
 import {
-  formatTimeRemaining,
-  formatTimeWithSeconds,
-  generateFlightForNumber,
-  generateSecurityZones,
-  getCurrentTime,
+    formatTimeRemaining,
+    formatTimeWithSeconds,
+    generateFlightForNumber,
+    generateSecurityZones,
+    getCurrentTime,
 } from '@/data/airportDatabase';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Animated,
-  Dimensions,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Animated,
+    Dimensions,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -491,6 +491,20 @@ export default function HomeScreen() {
               <MaterialCommunityIcons name="compass" size={32} color="#fff" />
             </View>
             <Text style={styles.actionTitle}>Services</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.actionCard} onPress={() => router.push('/baggage-lost')} activeOpacity={0.85}>
+            <View style={[styles.actionIcon, { backgroundColor: '#7C3AED' }]}>
+              <MaterialCommunityIcons name="bag-suitcase" size={32} color="#fff" />
+            </View>
+            <Text style={styles.actionTitle}>Bagage perdu</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.actionCard} onPress={() => router.push('/baggage-damaged')} activeOpacity={0.85}>
+            <View style={[styles.actionIcon, { backgroundColor: '#1565C0' }]}>
+              <MaterialCommunityIcons name="bag-suitcase-outline" size={32} color="#fff" />
+            </View>
+            <Text style={styles.actionTitle}>Bagage endommagé</Text>
           </TouchableOpacity>
         </View>
 
