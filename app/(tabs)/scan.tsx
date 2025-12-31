@@ -6,14 +6,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Alert,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  Vibration,
-  View
+    Alert,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    Vibration,
+    View
 } from 'react-native';
 
 function QRScannerScreenContent() {
@@ -23,13 +23,11 @@ function QRScannerScreenContent() {
   const [baggages, setBaggages] = useState<any[]>([]);
   const [currentMode, setCurrentMode] = useState('checkin');
   const [maysPoints, setMaysPoints] = useState(0);
-  const [recoveryModalVisible, setRecoveryModalVisible] = useState(false);
-  const [recoveryCode, setRecoveryCode] = useState('');
   const [showClaimModal, setShowClaimModal] = useState(false);
 
   // Connexion avec le Smart Guide
   const { completeStepByQR } = useJourney();
-  const scanTimeoutRef = useRef(null);
+  const scanTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastScannedCodeRef = useRef('');
   const lastScanTimeRef = useRef(0);
 
@@ -44,7 +42,7 @@ function QRScannerScreenContent() {
         clearTimeout(scanTimeoutRef.current);
       }
     };
-  }, [permission]);
+  }, [permission, requestPermission]);
 
   const loadMaysPoints = async () => {
     try {
@@ -57,7 +55,7 @@ function QRScannerScreenContent() {
     }
   };
 
-  const saveMaysPoints = async (points) => {
+  const saveMaysPoints = async (points: number) => {
     try {
       await AsyncStorage.setItem('maysPoints', points.toString());
     } catch (error) {
@@ -65,13 +63,13 @@ function QRScannerScreenContent() {
     }
   };
 
-  const earnMays = async (points) => {
+  const earnMays = async (points: number) => {
     const newTotal = maysPoints + points;
     setMaysPoints(newTotal);
     await saveMaysPoints(newTotal);
   };
 
-  const handleBarCodeScanned = (scanningResult) => {
+  const handleBarCodeScanned = (scanningResult: { data: string }) => {
     const now = Date.now();
     const timeSinceLastScan = now - lastScanTimeRef.current;
 
@@ -97,6 +95,7 @@ function QRScannerScreenContent() {
       const qrData = JSON.parse(scanningResult.data);
       processQRCode(qrData);
     } catch (error) {
+      console.log('Erreur parsing QR:', error);
       Alert.alert(
         'Format non reconnu',
         'Le QR code doit être au format JSON.'
@@ -109,7 +108,7 @@ function QRScannerScreenContent() {
     }, 3000);
   };
 
-  const processQRCode = (qrData) => {
+  const processQRCode = (qrData: any) => {
     const scanRecord = {
       id: Date.now().toString(),
       type: currentMode,
@@ -126,7 +125,7 @@ function QRScannerScreenContent() {
     }
   };
 
-  const handleCheckInScan = async (data) => {
+  const handleCheckInScan = async (data: any) => {
     const baggageId = data.baggageId;
 
     if (!baggageId) {
@@ -169,7 +168,7 @@ function QRScannerScreenContent() {
     );
   };
 
-  const handleCheckOutScan = async (data) => {
+  const handleCheckOutScan = async (data: any) => {
     const baggageId = data.baggageId;
 
     if (!baggageId) {
@@ -230,7 +229,7 @@ function QRScannerScreenContent() {
     }
   };
 
-  const compareWithCheckinData = (baggage, checkoutData) => {
+  const compareWithCheckinData = (baggage: any, checkoutData: any) => {
     const checkinData = baggage.originalData;
 
     if (checkoutData.baggageId !== baggage.id) {
@@ -263,44 +262,6 @@ function QRScannerScreenContent() {
     if (scanTimeoutRef.current) {
       clearTimeout(scanTimeoutRef.current);
     }
-  };
-
-  // NOUVELLE FONCTIONNALITÉ : Récupération des Mays
-  const handleRecoverMays = async () => {
-    if (!recoveryCode.trim()) {
-      Alert.alert('Erreur', 'Veuillez entrer un code de récupération');
-      return;
-    }
-
-    try {
-      // Simulation de vérification du code de récupération
-      // En réalité, vous devriez vérifier ce code avec votre backend
-      const isValidRecoveryCode = await validateRecoveryCode(recoveryCode);
-
-      if (isValidRecoveryCode) {
-        const recoveredPoints = 50; // Points à récupérer
-        await earnMays(recoveredPoints);
-
-        Alert.alert(
-          'Mays Récupérés !',
-          `Vous avez récupéré ${recoveredPoints} Mays !\n\nVotre solde actuel: ${maysPoints + recoveredPoints} Mays`
-        );
-
-        setRecoveryModalVisible(false);
-        setRecoveryCode('');
-      } else {
-        Alert.alert('Code invalide', 'Le code de récupération est invalide ou a déjà été utilisé.');
-      }
-    } catch (error) {
-      Alert.alert('Erreur', 'Une erreur est survenue lors de la récupération des Mays.');
-    }
-  };
-
-  const validateRecoveryCode = async (code) => {
-    // Simulation de validation - À remplacer par votre logique réelle
-    // Vérification avec votre backend ou stockage local
-    const validCodes = ['MAYS2024', 'RECOVERY123', 'BAGGAGEBONUS'];
-    return validCodes.includes(code.toUpperCase());
   };
 
   const clearAllData = async () => {

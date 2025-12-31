@@ -153,7 +153,7 @@ export default function BaggageLostScreen() {
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Bagage</Text>
 
-            <Text style={styles.label}>Numéro d'étiquette bagage *</Text>
+            <Text style={styles.label}>Numéro d’étiquette bagage *</Text>
             <TextInput style={styles.input} value={form.baggageTagNumber} onChangeText={(t) => setField('baggageTagNumber', t)} placeholder="Ex: 1234 567890" />
 
             <Text style={styles.label}>Référence PIR (si disponible)</Text>

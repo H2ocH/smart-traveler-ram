@@ -11,12 +11,39 @@ interface Props {
 
 export default function CompassIndicator({ targetDirection = 0, size = 140, zoneName }: Props) {
     const [heading, setHeading] = useState(0);
-    const [subscription, setSubscription] = useState<any>(null);
     const rotateAnim = React.useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
-        _subscribe();
-        return () => _unsubscribe();
+        let sub: any = null;
+        let isActive = true;
+
+        (async () => {
+            try {
+                const isAvailable = await Magnetometer.isAvailableAsync();
+                if (!isAvailable || !isActive) {
+                    console.log('Magnetometer not available');
+                    return;
+                }
+
+                Magnetometer.setUpdateInterval(100);
+                sub = Magnetometer.addListener((data) => {
+                    let angle = Math.atan2(data.y, data.x) * (180 / Math.PI);
+                    angle = (angle + 360) % 360;
+                    setHeading(Math.round(angle));
+                });
+            } catch (error) {
+                console.log('Error checking/subscribing to magnetometer:', error);
+            }
+        })();
+
+        return () => {
+            isActive = false;
+            try {
+                sub && sub.remove();
+            } catch (error) {
+                console.log('Error unsubscribing:', error);
+            }
+        };
     }, []);
 
     useEffect(() => {
@@ -26,36 +53,7 @@ export default function CompassIndicator({ targetDirection = 0, size = 140, zone
             easing: Easing.out(Easing.ease),
             useNativeDriver: true,
         }).start();
-    }, [heading]);
-
-    const _subscribe = async () => {
-        try {
-            const isAvailable = await Magnetometer.isAvailableAsync();
-            if (!isAvailable) {
-                console.log('Magnetometer not available');
-                return;
-            }
-
-            Magnetometer.setUpdateInterval(100);
-            const sub = Magnetometer.addListener((data) => {
-                let angle = Math.atan2(data.y, data.x) * (180 / Math.PI);
-                angle = (angle + 360) % 360;
-                setHeading(Math.round(angle));
-            });
-            setSubscription(sub);
-        } catch (error) {
-            console.log('Error checking/subscribing to magnetometer:', error);
-        }
-    };
-
-    const _unsubscribe = () => {
-        try {
-            subscription && subscription.remove();
-            setSubscription(null);
-        } catch (error) {
-            console.log('Error unsubscribing:', error);
-        }
-    };
+    }, [heading, rotateAnim]);
 
     // Calculate the angle to point to target
     const targetRotation = ((targetDirection - heading + 360) % 360);

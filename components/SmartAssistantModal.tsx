@@ -10,7 +10,6 @@ import {
 import {
     calculateMultipleRoutes,
     getGateZoneId,
-    NavigationStep,
     RouteOption
 } from '@/data/airportNavigation';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -18,17 +17,14 @@ import { router } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
     Alert,
-    Dimensions,
     Modal,
     ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
     Vibration,
-    View,
+    View
 } from 'react-native';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface Props {
     visible: boolean;
@@ -85,7 +81,7 @@ export default function SmartAssistantModal({ visible, onClose, flightNumber, lo
             setShowBaggageScan(false);
             setBaggageValidated(false);
         }
-    }, [visible, flightNumber, isVIP]);
+    }, [visible, flightNumber, isVIP, destination, destinationCode]);
 
     const handleClose = () => {
         onClose();
@@ -156,18 +152,6 @@ export default function SmartAssistantModal({ visible, onClose, flightNumber, lo
         if (level === 'high') return '#DC2626';
         if (level === 'medium') return '#F59E0B';
         return '#10B981';
-    };
-
-    const getDirectionIcon = (direction: NavigationStep['direction']): string => {
-        switch (direction) {
-            case 'straight': return 'arrow-up';
-            case 'left': return 'arrow-left';
-            case 'right': return 'arrow-right';
-            case 'up': return 'stairs-up';
-            case 'down': return 'stairs-down';
-            case 'arrive': return 'flag-checkered';
-            default: return 'arrow-up';
-        }
     };
 
     const getRouteIcon = (routeId: string): string => {
