@@ -1,14 +1,21 @@
-import { JOURNEY_STEPS, useJourney } from '@/context/JourneyContext';
+import { useJourney } from '@/context/JourneyContext';
 import {
     Flight,
     formatTimeRemaining,
     formatTimeWithSeconds,
     generateFlightForNumber,
-    generateSecurityZones,
     getCurrentTime,
 } from '@/data/airportDatabase';
+import {
+    calculateOptimalRoute,
+    getDirectionText,
+    getGateZoneId,
+    getRealtimeZoneData,
+    NavigationStep,
+    OptimalRoute,
+} from '@/data/airportNavigation';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     Animated,
     Dimensions,
@@ -33,83 +40,107 @@ interface Props {
 export default function SmartAssistantModal({ visible, onClose, flightNumber, loyaltyTier }: Props) {
     const [currentTime, setCurrentTime] = useState(getCurrentTime());
     const [myFlight, setMyFlight] = useState<Flight | null>(null);
-    const [securityInfo, setSecurityInfo] = useState<any>(null);
+    const [route, setRoute] = useState<OptimalRoute | null>(null);
+    const [currentNavStep, setCurrentNavStep] = useState(0);
+    const [zonesData, setZonesData] = useState(getRealtimeZoneData());
 
-    // Utiliser le contexte partagé du parcours
-    const { currentStepIndex, completedSteps, advanceStep, isStepCompleted, lastScanResult } = useJourney();
+    const { currentStepIndex, completedSteps, advanceStep, isStepCompleted } = useJourney();
 
     const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
     const pulseAnim = useRef(new Animated.Value(1)).current;
-    const progressAnim = useRef(new Animated.Value(0)).current;
 
-    // Horloge temps réel
+    const isVIP = loyaltyTier === 'gold' || loyaltyTier === 'platinum';
+
+    // Rafraîchir données temps réel
     useEffect(() => {
         const interval = setInterval(() => {
             setCurrentTime(getCurrentTime());
-            // Rafraîchir données vol toutes les 10 secondes
-            if (flightNumber) {
-                setMyFlight(generateFlightForNumber(flightNumber));
-                const zones = generateSecurityZones();
-                const best = [...zones].sort((a, b) => a.currentWaitTime - b.currentWaitTime)[0];
-                setSecurityInfo(best);
+            setZonesData(getRealtimeZoneData());
+
+            if (flightNumber && myFlight) {
+                // Recalculer la route avec les nouvelles données de foule
+                const gateId = getGateZoneId(myFlight.newGate || myFlight.gate);
+                const newRoute = calculateOptimalRoute('entrance', gateId, isVIP);
+                setRoute(newRoute);
             }
-        }, 1000);
+        }, 5000); // Mise à jour toutes les 5 secondes
+
         return () => clearInterval(interval);
-    }, [flightNumber]);
+    }, [flightNumber, myFlight, isVIP]);
+
+    // Horloge temps réel (secondes)
+    useEffect(() => {
+        const interval = setInterval(() => setCurrentTime(getCurrentTime()), 1000);
+        return () => clearInterval(interval);
+    }, []);
 
     // Animation pulse
     useEffect(() => {
         const pulse = Animated.loop(
             Animated.sequence([
-                Animated.timing(pulseAnim, { toValue: 1.05, duration: 1000, useNativeDriver: true }),
-                Animated.timing(pulseAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
+                Animated.timing(pulseAnim, { toValue: 1.03, duration: 1200, useNativeDriver: true }),
+                Animated.timing(pulseAnim, { toValue: 1, duration: 1200, useNativeDriver: true }),
             ])
         );
         pulse.start();
         return () => pulse.stop();
     }, []);
 
-    // Animation ouverture
+    // Initialisation
     useEffect(() => {
         if (visible && flightNumber) {
             Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, tension: 65, friction: 10 }).start();
-            // Charger données initiales
-            setMyFlight(generateFlightForNumber(flightNumber));
-            const zones = generateSecurityZones();
-            const best = [...zones].sort((a, b) => a.currentWaitTime - b.currentWaitTime)[0];
-            setSecurityInfo(best);
+
+            const flight = generateFlightForNumber(flightNumber);
+            setMyFlight(flight);
+
+            // Calculer route optimale vers la porte
+            const gateId = getGateZoneId(flight.newGate || flight.gate);
+            const optimalRoute = calculateOptimalRoute('entrance', gateId, isVIP);
+            setRoute(optimalRoute);
+            setCurrentNavStep(0);
         } else {
             slideAnim.setValue(SCREEN_HEIGHT);
         }
-    }, [visible, flightNumber]);
-
-    // Animation barre de progression
-    useEffect(() => {
-        const progress = (currentStepIndex / (JOURNEY_STEPS.length - 1)) * 100;
-        Animated.timing(progressAnim, { toValue: progress, duration: 500, useNativeDriver: false }).start();
-    }, [currentStepIndex]);
+    }, [visible, flightNumber, isVIP]);
 
     const handleClose = () => {
         Animated.timing(slideAnim, { toValue: SCREEN_HEIGHT, duration: 300, useNativeDriver: true }).start(() => onClose());
     };
 
-    const handleStepComplete = () => {
+    const handleArrived = useCallback(() => {
         Vibration.vibrate(100);
-        advanceStep();
+        if (route && currentNavStep < route.steps.length - 1) {
+            setCurrentNavStep(prev => prev + 1);
+            // Avancer aussi dans le parcours global si applicable
+            const navStep = route.steps[currentNavStep];
+            if (navStep.zoneId.includes('security')) advanceStep();
+            if (navStep.zoneId.includes('passport')) advanceStep();
+            if (navStep.zoneId.includes('gate')) advanceStep();
+        }
+    }, [route, currentNavStep, advanceStep]);
+
+    const currentStep = route?.steps[currentNavStep];
+    const isLastStep = route ? currentNavStep === route.steps.length - 1 : false;
+
+    const getCrowdColor = (level: 'low' | 'medium' | 'high' | null) => {
+        if (!level) return '#10B981';
+        if (level === 'high') return '#DC2626';
+        if (level === 'medium') return '#F59E0B';
+        return '#10B981';
     };
 
-    const currentStep = JOURNEY_STEPS[currentStepIndex];
-    const isLastStep = currentStepIndex === JOURNEY_STEPS.length - 1;
-    const allCompleted = completedSteps.length === JOURNEY_STEPS.length;
-
-    const getStepColor = (index: number) => {
-        if (index < currentStepIndex || isStepCompleted(JOURNEY_STEPS[index].id)) return '#10B981';
-        if (index === currentStepIndex) return '#B22222';
-        return '#CBD5E1';
+    const getDirectionIcon = (direction: NavigationStep['direction']): string => {
+        switch (direction) {
+            case 'straight': return 'arrow-up';
+            case 'left': return 'arrow-left';
+            case 'right': return 'arrow-right';
+            case 'up': return 'stairs-up';
+            case 'down': return 'stairs-down';
+            case 'arrive': return 'flag-checkered';
+            default: return 'arrow-up';
+        }
     };
-
-    // Message si scan QR a validé une étape
-    const showScanSuccess = lastScanResult?.success && lastScanResult?.stepAdvanced;
 
     return (
         <Modal visible={visible} transparent animationType="fade" statusBarTranslucent>
@@ -121,25 +152,25 @@ export default function SmartAssistantModal({ visible, onClose, flightNumber, lo
                         <View style={styles.headerMain}>
                             <View style={styles.headerLeft}>
                                 <View style={styles.aiIconBox}>
-                                    <MaterialCommunityIcons name="robot-happy" size={28} color="#fff" />
+                                    <MaterialCommunityIcons name="navigation-variant" size={28} color="#fff" />
                                     <View style={styles.aiPulse} />
                                 </View>
                                 <View>
                                     <View style={styles.titleRow}>
-                                        <Text style={styles.headerTitle}>Smart Guide</Text>
+                                        <Text style={styles.headerTitle}>Smart Navigator</Text>
                                         <View style={styles.aiBadge}>
                                             <Text style={styles.aiBadgeText}>IA</Text>
                                         </View>
                                     </View>
-                                    <Text style={styles.headerSubtitle}>Je vous guide pas à pas</Text>
+                                    <Text style={styles.headerSubtitle}>Chemin optimal en temps réel</Text>
                                 </View>
                             </View>
-                            <TouchableOpacity onPress={handleClose} style={styles.closeBtn} activeOpacity={0.85}>
+                            <TouchableOpacity onPress={handleClose} style={styles.closeBtn}>
                                 <MaterialCommunityIcons name="close" size={22} color="#1E293B" />
                             </TouchableOpacity>
                         </View>
 
-                        {/* Flight Info */}
+                        {/* Flight & Time */}
                         <View style={styles.infoRow}>
                             <View style={styles.timeBox}>
                                 <View style={styles.timeDot} />
@@ -154,149 +185,159 @@ export default function SmartAssistantModal({ visible, onClose, flightNumber, lo
                             )}
                         </View>
 
-                        {/* Countdown */}
+                        {/* Countdown & Gate */}
                         {myFlight && (
                             <View style={styles.countdownBar}>
-                                <MaterialCommunityIcons name="timer-sand" size={18} color="#D4AF37" />
-                                <Text style={styles.countdownLabel}>Embarquement</Text>
-                                <Text style={styles.countdownValue}>{formatTimeRemaining(myFlight.boardingTime)}</Text>
+                                <View style={styles.gateInfo}>
+                                    <MaterialCommunityIcons name="gate" size={18} color="#fff" />
+                                    <Text style={styles.gateText}>Porte {myFlight.newGate || myFlight.gate}</Text>
+                                </View>
+                                <View style={styles.timeRemaining}>
+                                    <MaterialCommunityIcons name="timer-sand" size={16} color="#D4AF37" />
+                                    <Text style={styles.countdownValue}>{formatTimeRemaining(myFlight.boardingTime)}</Text>
+                                </View>
                             </View>
                         )}
                     </View>
 
-                    {/* Scan Success Banner */}
-                    {showScanSuccess && (
-                        <View style={styles.scanSuccessBanner}>
-                            <MaterialCommunityIcons name="qrcode-scan" size={20} color="#166534" />
-                            <Text style={styles.scanSuccessText}>{lastScanResult.message}</Text>
+                    {/* Route Summary */}
+                    {route && (
+                        <View style={styles.routeSummary}>
+                            <View style={styles.summaryItem}>
+                                <MaterialCommunityIcons name="clock-outline" size={18} color="#64748B" />
+                                <Text style={styles.summaryText}>{route.totalTime} min</Text>
+                            </View>
+                            <View style={styles.summaryItem}>
+                                <MaterialCommunityIcons name="map-marker-distance" size={18} color="#64748B" />
+                                <Text style={styles.summaryText}>{route.totalDistance}</Text>
+                            </View>
+                            <View style={[styles.summaryItem, styles.crowdBadge, { backgroundColor: route.crowdScore > 50 ? '#FEE2E2' : '#D1FAE5' }]}>
+                                <MaterialCommunityIcons name="account-group" size={18} color={route.crowdScore > 50 ? '#DC2626' : '#10B981'} />
+                                <Text style={[styles.summaryText, { color: route.crowdScore > 50 ? '#DC2626' : '#10B981' }]}>
+                                    {route.crowdScore > 50 ? 'Dense' : 'Fluide'}
+                                </Text>
+                            </View>
+                            {isVIP && (
+                                <View style={[styles.summaryItem, styles.vipBadge]}>
+                                    <MaterialCommunityIcons name="crown" size={16} color="#D4AF37" />
+                                    <Text style={styles.vipText}>VIP</Text>
+                                </View>
+                            )}
                         </View>
                     )}
 
-                    {/* Progress Bar */}
-                    <View style={styles.progressSection}>
-                        <View style={styles.progressBar}>
-                            <Animated.View
-                                style={[
-                                    styles.progressFill,
-                                    { width: progressAnim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }) }
-                                ]}
-                            />
-                        </View>
-                        <Text style={styles.progressText}>
-                            Étape {currentStepIndex + 1} / {JOURNEY_STEPS.length}
-                        </Text>
-                    </View>
-
-                    {/* Steps Timeline */}
-                    <View style={styles.timeline}>
-                        {JOURNEY_STEPS.map((step, index) => (
-                            <View key={step.id} style={styles.timelineItem}>
-                                <View style={[styles.timelineDot, { backgroundColor: getStepColor(index) }]}>
-                                    {(index < currentStepIndex || isStepCompleted(step.id)) && (
-                                        <MaterialCommunityIcons name="check" size={12} color="#fff" />
-                                    )}
-                                </View>
-                                {index < JOURNEY_STEPS.length - 1 && (
-                                    <View style={[styles.timelineLine, { backgroundColor: getStepColor(index) }]} />
-                                )}
-                            </View>
-                        ))}
-                    </View>
-
-                    {/* Current Step Content */}
+                    {/* Navigation Steps */}
                     <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                        {!allCompleted ? (
-                            <Animated.View style={[styles.stepCard, { transform: [{ scale: pulseAnim }] }]}>
-                                <View style={styles.stepIconBox}>
+
+                        {/* Current Step Card */}
+                        {currentStep && (
+                            <Animated.View style={[styles.currentStepCard, { transform: [{ scale: pulseAnim }] }]}>
+                                {/* Direction Arrow */}
+                                <View style={styles.directionBox}>
                                     <MaterialCommunityIcons
-                                        name={currentStep.icon as any}
-                                        size={40}
-                                        color="#B22222"
+                                        name={getDirectionIcon(currentStep.direction) as any}
+                                        size={50}
+                                        color="#fff"
                                     />
                                 </View>
 
-                                <Text style={styles.stepTitle}>{currentStep.title}</Text>
-                                <Text style={styles.stepInstruction}>{currentStep.instruction}</Text>
+                                <Text style={styles.directionText}>{getDirectionText(currentStep.direction)}</Text>
+                                <Text style={styles.instruction}>{currentStep.instruction}</Text>
 
-                                {/* QR Scan Hint */}
-                                {currentStep.qrType && (
-                                    <View style={styles.qrHint}>
-                                        <MaterialCommunityIcons name="qrcode-scan" size={20} color="#7C3AED" />
-                                        <Text style={styles.qrHintText}>
-                                            Scannez votre QR pour valider automatiquement
+                                {/* Crowd Warning */}
+                                {currentStep.crowdWarning && (
+                                    <View style={[styles.crowdWarning, { backgroundColor: getCrowdColor(currentStep.crowdWarning) + '20' }]}>
+                                        <MaterialCommunityIcons
+                                            name="account-group"
+                                            size={20}
+                                            color={getCrowdColor(currentStep.crowdWarning)}
+                                        />
+                                        <Text style={[styles.crowdText, { color: getCrowdColor(currentStep.crowdWarning) }]}>
+                                            {currentStep.crowdWarning === 'high' && '⚠️ Zone très fréquentée'}
+                                            {currentStep.crowdWarning === 'medium' && '👥 Affluence moyenne'}
                                         </Text>
                                     </View>
                                 )}
 
-                                {/* Dynamic Info - Security Wait Time */}
-                                {currentStep.id === 'security' && securityInfo && (
-                                    <View style={styles.dynamicInfo}>
-                                        <MaterialCommunityIcons name="clock-fast" size={20} color="#1565C0" />
-                                        <Text style={styles.dynamicText}>
-                                            {securityInfo.name}: <Text style={styles.dynamicHighlight}>{securityInfo.currentWaitTime} min</Text> d'attente
-                                        </Text>
+                                {/* Alternative Route */}
+                                {currentStep.alternativeRoute && (
+                                    <View style={styles.alternativeBox}>
+                                        <MaterialCommunityIcons name="routes" size={18} color="#7C3AED" />
+                                        <Text style={styles.alternativeText}>{currentStep.alternativeRoute}</Text>
                                     </View>
                                 )}
 
-                                {/* Dynamic Info - Gate */}
-                                {currentStep.id === 'gate' && myFlight && (
-                                    <View style={styles.dynamicInfo}>
-                                        <MaterialCommunityIcons name="gate" size={20} color="#D4AF37" />
-                                        <Text style={styles.dynamicText}>
-                                            Porte: <Text style={styles.dynamicHighlight}>{myFlight.newGate || myFlight.gate}</Text>
-                                            {myFlight.newGate && <Text style={styles.gateChanged}> (Changée!)</Text>}
+                                {/* Wait Time */}
+                                {currentStep.estimatedTime > 2 && (
+                                    <View style={styles.waitInfo}>
+                                        <MaterialCommunityIcons name="clock-fast" size={18} color="#1565C0" />
+                                        <Text style={styles.waitText}>
+                                            Temps estimé: <Text style={styles.waitBold}>{currentStep.estimatedTime} min</Text>
                                         </Text>
                                     </View>
                                 )}
-
-                                {/* Tips */}
-                                <View style={styles.tipsBox}>
-                                    <Text style={styles.tipsTitle}>💡 Conseils</Text>
-                                    {currentStep.tips.map((tip, i) => (
-                                        <View key={i} style={styles.tipRow}>
-                                            <MaterialCommunityIcons name="check-circle" size={16} color="#10B981" />
-                                            <Text style={styles.tipText}>{tip}</Text>
-                                        </View>
-                                    ))}
-                                </View>
 
                                 {/* Action Button */}
                                 <TouchableOpacity
                                     style={[styles.actionButton, isLastStep && styles.actionButtonFinal]}
-                                    onPress={handleStepComplete}
+                                    onPress={handleArrived}
                                     activeOpacity={0.9}
                                 >
-                                    <Text style={styles.actionButtonText}>{currentStep.action}</Text>
+                                    <Text style={styles.actionButtonText}>
+                                        {isLastStep ? "Je suis à ma porte !" : "Je suis arrivé →"}
+                                    </Text>
                                     <MaterialCommunityIcons
-                                        name={isLastStep ? "airplane-takeoff" : "arrow-right"}
-                                        size={20}
+                                        name={isLastStep ? "airplane-takeoff" : "check-circle"}
+                                        size={22}
                                         color="#fff"
                                     />
                                 </TouchableOpacity>
                             </Animated.View>
-                        ) : (
-                            <View style={styles.completedCard}>
-                                <View style={styles.completedIcon}>
-                                    <MaterialCommunityIcons name="party-popper" size={60} color="#D4AF37" />
-                                </View>
-                                <Text style={styles.completedTitle}>Bon voyage ! ✈️</Text>
-                                <Text style={styles.completedText}>
-                                    Vous êtes à bord du vol {flightNumber}. Profitez de votre voyage vers {myFlight?.destination} !
-                                </Text>
-                                <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-                                    <Text style={styles.closeButtonText}>Fermer</Text>
-                                </TouchableOpacity>
-                            </View>
                         )}
-                    </ScrollView>
 
-                    {/* VIP Badge */}
-                    {(loyaltyTier === 'gold' || loyaltyTier === 'platinum') && (
-                        <View style={styles.vipBadge}>
-                            <MaterialCommunityIcons name="crown" size={16} color="#D4AF37" />
-                            <Text style={styles.vipText}>Accès prioritaire disponible</Text>
+                        {/* Steps Overview */}
+                        <View style={styles.stepsOverview}>
+                            <Text style={styles.overviewTitle}>📍 Votre itinéraire</Text>
+                            {route?.steps.map((step, index) => (
+                                <View
+                                    key={step.zoneId + index}
+                                    style={[
+                                        styles.stepItem,
+                                        index < currentNavStep && styles.stepCompleted,
+                                        index === currentNavStep && styles.stepCurrent,
+                                    ]}
+                                >
+                                    <View style={[
+                                        styles.stepDot,
+                                        { backgroundColor: index <= currentNavStep ? '#10B981' : '#CBD5E1' }
+                                    ]}>
+                                        {index < currentNavStep && (
+                                            <MaterialCommunityIcons name="check" size={12} color="#fff" />
+                                        )}
+                                    </View>
+                                    <View style={styles.stepContent}>
+                                        <Text style={[
+                                            styles.stepName,
+                                            index === currentNavStep && styles.stepNameCurrent
+                                        ]}>
+                                            {step.zoneName}
+                                        </Text>
+                                        {step.crowdWarning && (
+                                            <View style={[styles.miniCrowd, { backgroundColor: getCrowdColor(step.crowdWarning) + '20' }]}>
+                                                <Text style={[styles.miniCrowdText, { color: getCrowdColor(step.crowdWarning) }]}>
+                                                    {step.crowdWarning === 'high' ? '⚡' : '👤'} {step.estimatedTime}min
+                                                </Text>
+                                            </View>
+                                        )}
+                                    </View>
+                                    {index < route.steps.length - 1 && (
+                                        <View style={[styles.stepLine, { backgroundColor: index < currentNavStep ? '#10B981' : '#E8ECF0' }]} />
+                                    )}
+                                </View>
+                            ))}
                         </View>
-                    )}
+
+                    </ScrollView>
 
                 </Animated.View>
             </View>
@@ -305,18 +346,18 @@ export default function SmartAssistantModal({ visible, onClose, flightNumber, lo
 }
 
 const styles = StyleSheet.create({
-    overlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.7)', justifyContent: 'flex-end' },
-    modalContainer: { backgroundColor: '#F8FAFC', borderTopLeftRadius: 32, borderTopRightRadius: 32, maxHeight: SCREEN_HEIGHT * 0.92, overflow: 'hidden' },
-    header: { backgroundColor: '#B22222', paddingTop: 20, paddingBottom: 16, paddingHorizontal: 20 },
+    overlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.75)', justifyContent: 'flex-end' },
+    modalContainer: { backgroundColor: '#F8FAFC', borderTopLeftRadius: 32, borderTopRightRadius: 32, maxHeight: SCREEN_HEIGHT * 0.93, overflow: 'hidden' },
+    header: { backgroundColor: '#1565C0', paddingTop: 20, paddingBottom: 16, paddingHorizontal: 20 },
     headerMain: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
     headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 14 },
     aiIconBox: { width: 52, height: 52, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
-    aiPulse: { position: 'absolute', top: -2, right: -2, width: 14, height: 14, borderRadius: 7, backgroundColor: '#4ADE80', borderWidth: 3, borderColor: '#B22222' },
+    aiPulse: { position: 'absolute', top: -2, right: -2, width: 14, height: 14, borderRadius: 7, backgroundColor: '#4ADE80', borderWidth: 3, borderColor: '#1565C0' },
     titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     headerTitle: { fontSize: 22, fontWeight: '900', color: '#fff' },
     aiBadge: { backgroundColor: 'rgba(255,255,255,0.25)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
     aiBadgeText: { fontSize: 10, fontWeight: '800', color: '#fff' },
-    headerSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.8)', fontWeight: '500', marginTop: 2 },
+    headerSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.85)', fontWeight: '500', marginTop: 2 },
     closeBtn: { width: 42, height: 42, borderRadius: 14, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
     infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
     timeBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12 },
@@ -324,44 +365,43 @@ const styles = StyleSheet.create({
     timeText: { fontSize: 18, fontWeight: '900', color: '#fff', fontVariant: ['tabular-nums'] },
     flightBox: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(0,0,0,0.2)', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12 },
     flightCode: { fontSize: 16, fontWeight: '800', color: '#fff' },
-    flightDest: { fontSize: 14, fontWeight: '700', color: '#D4AF37' },
-    countdownBar: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(212,175,55,0.2)', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: 'rgba(212,175,55,0.4)' },
-    countdownLabel: { fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.85)' },
-    countdownValue: { fontSize: 18, fontWeight: '900', color: '#D4AF37', marginLeft: 'auto' },
-    scanSuccessBanner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: '#D1FAE5', padding: 12, borderBottomWidth: 1, borderBottomColor: '#A7F3D0' },
-    scanSuccessText: { fontSize: 14, fontWeight: '700', color: '#166534' },
-    progressSection: { paddingHorizontal: 20, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#E8ECF0' },
-    progressBar: { flex: 1, height: 8, backgroundColor: '#E8ECF0', borderRadius: 4, overflow: 'hidden' },
-    progressFill: { height: '100%', backgroundColor: '#10B981', borderRadius: 4 },
-    progressText: { fontSize: 12, fontWeight: '700', color: '#64748B' },
-    timeline: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: 12, backgroundColor: '#fff' },
-    timelineItem: { flexDirection: 'row', alignItems: 'center' },
-    timelineDot: { width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-    timelineLine: { width: 30, height: 3, borderRadius: 2 },
-    content: { flex: 1, padding: 20 },
-    stepCard: { backgroundColor: '#fff', borderRadius: 24, padding: 24, alignItems: 'center', shadowColor: '#B22222', shadowOpacity: 0.15, shadowRadius: 20, shadowOffset: { width: 0, height: 10 }, elevation: 8 },
-    stepIconBox: { width: 90, height: 90, borderRadius: 28, backgroundColor: 'rgba(178, 34, 34, 0.1)', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-    stepTitle: { fontSize: 24, fontWeight: '900', color: '#1E293B', marginBottom: 8, textAlign: 'center' },
-    stepInstruction: { fontSize: 15, fontWeight: '500', color: '#64748B', textAlign: 'center', lineHeight: 22, marginBottom: 16 },
-    qrHint: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F3E8FF', padding: 12, borderRadius: 12, marginBottom: 16, width: '100%' },
-    qrHintText: { fontSize: 13, fontWeight: '600', color: '#7C3AED', flex: 1 },
-    dynamicInfo: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#EFF6FF', padding: 14, borderRadius: 14, marginBottom: 16, width: '100%' },
-    dynamicText: { fontSize: 14, fontWeight: '600', color: '#1E293B' },
-    dynamicHighlight: { fontWeight: '900', color: '#1565C0' },
-    gateChanged: { color: '#DC2626', fontWeight: '700' },
-    tipsBox: { backgroundColor: '#F0FDF4', padding: 16, borderRadius: 14, width: '100%', marginBottom: 20 },
-    tipsTitle: { fontSize: 14, fontWeight: '800', color: '#166534', marginBottom: 10 },
-    tipRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
-    tipText: { fontSize: 13, fontWeight: '500', color: '#166534', flex: 1 },
-    actionButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: '#B22222', paddingVertical: 18, paddingHorizontal: 32, borderRadius: 18, width: '100%' },
+    flightDest: { fontSize: 14, fontWeight: '700', color: '#FBBF24' },
+    countdownBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'rgba(0,0,0,0.15)', borderRadius: 14, padding: 14 },
+    gateInfo: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    gateText: { fontSize: 16, fontWeight: '800', color: '#fff' },
+    timeRemaining: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    countdownValue: { fontSize: 18, fontWeight: '900', color: '#D4AF37' },
+    routeSummary: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', padding: 14, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#E8ECF0', flexWrap: 'wrap', gap: 8 },
+    summaryItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    summaryText: { fontSize: 13, fontWeight: '700', color: '#64748B' },
+    crowdBadge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12 },
+    vipBadge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, backgroundColor: '#FEF3C7' },
+    vipText: { fontSize: 12, fontWeight: '800', color: '#D4AF37' },
+    content: { flex: 1, padding: 16 },
+    currentStepCard: { backgroundColor: '#fff', borderRadius: 24, padding: 24, alignItems: 'center', marginBottom: 20, shadowColor: '#1565C0', shadowOpacity: 0.2, shadowRadius: 20, shadowOffset: { width: 0, height: 10 }, elevation: 10 },
+    directionBox: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#1565C0', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+    directionText: { fontSize: 24, fontWeight: '900', color: '#1E293B', marginBottom: 6 },
+    instruction: { fontSize: 16, fontWeight: '600', color: '#64748B', textAlign: 'center', marginBottom: 16 },
+    crowdWarning: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 12, marginBottom: 12, width: '100%' },
+    crowdText: { fontSize: 14, fontWeight: '700', flex: 1 },
+    alternativeBox: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F3E8FF', padding: 12, borderRadius: 12, marginBottom: 12, width: '100%' },
+    alternativeText: { fontSize: 13, fontWeight: '600', color: '#7C3AED', flex: 1 },
+    waitInfo: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
+    waitText: { fontSize: 14, fontWeight: '500', color: '#1565C0' },
+    waitBold: { fontWeight: '800' },
+    actionButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: '#1565C0', paddingVertical: 18, paddingHorizontal: 32, borderRadius: 18, width: '100%' },
     actionButtonFinal: { backgroundColor: '#166534' },
     actionButtonText: { fontSize: 17, fontWeight: '800', color: '#fff' },
-    completedCard: { backgroundColor: '#fff', borderRadius: 24, padding: 32, alignItems: 'center' },
-    completedIcon: { width: 120, height: 120, borderRadius: 40, backgroundColor: 'rgba(212, 175, 55, 0.1)', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
-    completedTitle: { fontSize: 28, fontWeight: '900', color: '#1E293B', marginBottom: 12 },
-    completedText: { fontSize: 15, fontWeight: '500', color: '#64748B', textAlign: 'center', lineHeight: 22, marginBottom: 24 },
-    closeButton: { backgroundColor: '#B22222', paddingVertical: 16, paddingHorizontal: 40, borderRadius: 16 },
-    closeButtonText: { fontSize: 16, fontWeight: '700', color: '#fff' },
-    vipBadge: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#FEF3C7', padding: 12, borderTopWidth: 1, borderTopColor: '#FDE68A' },
-    vipText: { fontSize: 13, fontWeight: '700', color: '#92400E' },
+    stepsOverview: { backgroundColor: '#fff', borderRadius: 20, padding: 20 },
+    overviewTitle: { fontSize: 16, fontWeight: '800', color: '#1E293B', marginBottom: 16 },
+    stepItem: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 4, opacity: 0.6 },
+    stepCompleted: { opacity: 0.5 },
+    stepCurrent: { opacity: 1 },
+    stepDot: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+    stepContent: { flex: 1, paddingBottom: 20 },
+    stepName: { fontSize: 14, fontWeight: '600', color: '#64748B' },
+    stepNameCurrent: { fontWeight: '800', color: '#1E293B', fontSize: 15 },
+    miniCrowd: { marginTop: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start' },
+    miniCrowdText: { fontSize: 11, fontWeight: '700' },
+    stepLine: { position: 'absolute', left: 11, top: 24, width: 2, height: 20 },
 });
