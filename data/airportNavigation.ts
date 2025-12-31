@@ -161,7 +161,7 @@ export function findOptimalPath(
                 if (isVIP) {
                     cost *= 0.3; // Réduction significative pour VIP
                 } else {
-                    cost += 500; // Pénalité MASSIVE pour non-VIP pour forcer le passage par A (Standard)
+                    cost += 20; // Pénalité pour non-VIP (décourage l'usage sauf si nécessaire)
                 }
             }
 
@@ -301,18 +301,7 @@ export function calculateMultipleRoutes(
     const zones = getRealtimeZoneData();
     const currentZones = JSON.parse(JSON.stringify(zones)) as AirportZone[];
 
-    // SIMULATION FOULE: Si activé, on sature la sécurité principale pour forcer un autre chemin
-    if (forceCrowd) {
-        currentZones.forEach(z => {
-            if (z.id === 'sec-a' || z.id === 'security_main') { // Security A crowded
-                z.crowdLevel = 95;
-                z.waitTime = 45;
-            }
-            if (z.id === 'lounge-atlas') { // Lounge Atlas crowded
-                z.crowdLevel = 90;
-            }
-        });
-    }
+    // SIMULATION FOULE REMOVED
 
     const options: RouteOption[] = [];
 

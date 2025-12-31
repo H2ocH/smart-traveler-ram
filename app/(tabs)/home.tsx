@@ -432,12 +432,12 @@ export default function HomeScreen() {
           >
             <View style={styles.smartContent}>
               <View style={styles.smartIcon}>
-                <MaterialCommunityIcons name="robot-happy" size={30} color="#B22222" />
+                <MaterialCommunityIcons name="map-marker-path" size={30} color="#B22222" />
                 <View style={styles.smartPulse} />
               </View>
               <View style={styles.smartText}>
                 <View style={styles.smartTitleRow}>
-                  <Text style={styles.smartTitle}>Smart Assistant</Text>
+                  <Text style={styles.smartTitle}>Guide Aéroport</Text>
                   <View style={styles.aiBadge}>
                     <Text style={styles.aiBadgeText}>IA</Text>
                   </View>

@@ -19,7 +19,6 @@ import {
     Modal,
     ScrollView,
     StyleSheet,
-    Switch,
     Text,
     TouchableOpacity,
     Vibration,
@@ -43,14 +42,14 @@ export default function SmartAssistantModal({ visible, onClose, flightNumber, lo
     const [currentNavStep, setCurrentNavStep] = useState(0);
     const [showBaggageScan, setShowBaggageScan] = useState(false);
     const [baggageValidated, setBaggageValidated] = useState(false);
-    const [isCrowdSimulated, setIsCrowdSimulated] = useState(false);
+    // isCrowdSimulated removed
 
     const { advanceStep } = useJourney();
 
     const isVIP = loyaltyTier === 'gold' || loyaltyTier === 'platinum';
 
     // Real-time data refresh removed to stabilize route time as requested. 
-    // Routes will only update when flightNumber, isVIP, or isCrowdSimulated changes (via the Initialization effect below).
+    // Routes will only update when flightNumber or isVIP changes.
 
     // Real-time clock
     useEffect(() => {
@@ -65,14 +64,14 @@ export default function SmartAssistantModal({ visible, onClose, flightNumber, lo
             setMyFlight(flight);
 
             const gateId = getGateZoneId(flight.newGate || flight.gate);
-            const routes = calculateMultipleRoutes('entrance', gateId, isVIP, isCrowdSimulated);
+            const routes = calculateMultipleRoutes('entrance', gateId, isVIP); // Removed forceCrowd
             setRouteOptions(routes);
             setSelectedRouteIndex(0);
             setCurrentNavStep(0);
             setShowBaggageScan(false);
             setBaggageValidated(false);
         }
-    }, [visible, flightNumber, isVIP, isCrowdSimulated, destination, destinationCode]);
+    }, [visible, flightNumber, isVIP, destination, destinationCode]);
 
     const handleClose = () => {
         onClose();
@@ -184,18 +183,13 @@ export default function SmartAssistantModal({ visible, onClose, flightNumber, lo
                 <View style={styles.header}>
                     <View style={styles.headerMain}>
                         <View style={styles.headerLeft}>
-                            <View style={styles.aiIconBox}>
-                                <MaterialCommunityIcons name="robot-happy" size={28} color="#fff" />
-                                <View style={styles.aiPulse} />
-                            </View>
                             <View>
                                 <View style={styles.titleRow}>
-                                    <Text style={styles.headerTitle}>Smart Assistant</Text>
+                                    <Text style={styles.headerTitle}>Guide Aéroport</Text>
                                     <View style={styles.aiBadge}>
                                         <Text style={styles.aiBadgeText}>IA</Text>
                                     </View>
                                 </View>
-                                <Text style={styles.headerSubtitle}>Navigation GPS en temps réel</Text>
                             </View>
                         </View>
                         <TouchableOpacity onPress={handleClose} style={styles.closeBtn}>
@@ -273,33 +267,9 @@ export default function SmartAssistantModal({ visible, onClose, flightNumber, lo
 
                     {/* Compass Card */}
 
-                    {/* Crowd Simulation Toggle */}
-                    <View style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        backgroundColor: '#FEF2F2',
-                        padding: 16,
-                        borderRadius: 12,
-                        marginBottom: 20,
-                        borderWidth: 1,
-                        borderColor: '#FCA5A5'
-                    }}>
-                        <View style={{ flex: 1 }}>
-                            <Text style={{ fontSize: 16, fontWeight: '700', color: '#B91C1C' }}>
-                                Simuler Foule / Traffic
-                            </Text>
-                            <Text style={{ fontSize: 12, color: '#EF4444', marginTop: 4 }}>
-                                Activez pour voir comment l'IA change d'itinéraire
-                            </Text>
-                        </View>
-                        <Switch
-                            trackColor={{ false: "#767577", true: "#EF4444" }}
-                            thumbColor={isCrowdSimulated ? "#fff" : "#f4f3f4"}
-                            onValueChange={() => setIsCrowdSimulated(prev => !prev)}
-                            value={isCrowdSimulated}
-                        />
-                    </View>
+
+                    {/* Crowd Simulation Toggle REMOVED */}
+
 
                     {/* Next Step Card (Replaces Compass) */}
                     {currentStep && (

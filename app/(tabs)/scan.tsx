@@ -502,7 +502,18 @@ function QRScannerScreenContent() {
             <MaterialCommunityIcons name="clipboard-list" size={18} color="#333" />
             <Text style={styles.historyTitle}>Historique des Scans</Text>
           </View>
-          <Text style={styles.historyCount}>({scanHistory.length})</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Text style={styles.historyCount}>({scanHistory.length})</Text>
+            {scanHistory.length > 0 && (
+              <TouchableOpacity onPress={() => {
+                setScanHistory([]);
+                setBaggages([]);
+                Alert.alert('Succès', 'Historique et bagages effacés');
+              }}>
+                <MaterialCommunityIcons name="delete-sweep" size={20} color="#EF4444" />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
         <View style={styles.historyList}>
