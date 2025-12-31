@@ -1,8 +1,8 @@
 import RequireAuth from '@/components/RequireAuth';
 import { formatTimeWithSeconds, generateLounges, getCurrentTime, getWeatherConditions } from '@/data/airportDatabase';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -11,15 +11,7 @@ export default function ExploreScreen() {
   const [lounges, setLounges] = useState<any[]>([]);
   const [weather, setWeather] = useState<any>(null);
 
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
 
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 500, useNativeDriver: true }),
-    ]).start();
-  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -65,7 +57,7 @@ export default function ExploreScreen() {
 
           {/* Weather Card */}
           {weather && (
-            <Animated.View style={[styles.weatherCard, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+            <View style={styles.weatherCard}>
               <View style={styles.weatherLeft}>
                 <View style={styles.weatherIconBox}>
                   <MaterialCommunityIcons
@@ -88,7 +80,7 @@ export default function ExploreScreen() {
                   </View>
                 )}
               </View>
-            </Animated.View>
+            </View>
           )}
 
           {/* Lounges Section */}
@@ -101,15 +93,9 @@ export default function ExploreScreen() {
           </View>
 
           {lounges.map((lounge, index) => (
-            <Animated.View
+            <View
               key={lounge.id}
-              style={[
-                styles.loungeCard,
-                {
-                  opacity: fadeAnim,
-                  transform: [{ translateY: Animated.multiply(slideAnim, new Animated.Value(1 + index * 0.2)) }]
-                }
-              ]}
+              style={styles.loungeCard}
             >
               <TouchableOpacity activeOpacity={0.9} style={styles.loungeInner}>
                 {lounge.hasPromo && (
@@ -167,7 +153,7 @@ export default function ExploreScreen() {
                   </TouchableOpacity>
                 </View>
               </TouchableOpacity>
-            </Animated.View>
+            </View>
           ))}
 
           {/* Services Grid */}

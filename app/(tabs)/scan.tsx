@@ -1,6 +1,7 @@
+import BaggageClaimModal from '@/components/BaggageClaimModal';
 import RequireAuth from '@/components/RequireAuth';
 import { useJourney } from '@/context/JourneyContext';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import React, { useEffect, useRef, useState } from 'react';
@@ -24,6 +25,7 @@ function QRScannerScreenContent() {
   const [maysPoints, setMaysPoints] = useState(0);
   const [recoveryModalVisible, setRecoveryModalVisible] = useState(false);
   const [recoveryCode, setRecoveryCode] = useState('');
+  const [showClaimModal, setShowClaimModal] = useState(false);
 
   // Connexion avec le Smart Guide
   const { completeStepByQR } = useJourney();
@@ -161,8 +163,8 @@ function QRScannerScreenContent() {
     completeStepByQR('baggage');
 
     Alert.alert(
-      '✅ Check-in Réussi',
-      `Bagage ${newBaggage.id} enregistré pour ${newBaggage.passengerName}\n\n+10 Mays! 🎉\n\n📱 Étape "Bagages" validée dans le Smart Guide!`,
+      'Check-in Réussi',
+      `Bagage ${newBaggage.id} enregistré pour ${newBaggage.passengerName}\n\n+10 Mays!\n\nÉtape "Bagages" validée!`,
       [{ text: 'OK', onPress: resetScanner }]
     );
   };
@@ -215,13 +217,13 @@ function QRScannerScreenContent() {
       await earnMays(15);
 
       Alert.alert(
-        '✅ Check-out Réussi',
-        `Bagage ${baggageId} validé pour ${baggage.passengerName}\n\nLes données correspondent ✅\n\n+15 Mays! 🎉`,
+        'Check-out Réussi',
+        `Bagage ${baggageId} validé pour ${baggage.passengerName}\n\nLes données correspondent\n\n+15 Mays!`,
         [{ text: 'OK', onPress: resetScanner }]
       );
     } else {
       Alert.alert(
-        '⚠️ Données incompatibles',
+        'Données incompatibles',
         `Les données scannées ne correspondent pas à l'enregistrement check-in.\n\nVeuillez vérifier le bagage.`,
         [{ text: 'OK', onPress: resetScanner }]
       );
@@ -280,7 +282,7 @@ function QRScannerScreenContent() {
         await earnMays(recoveredPoints);
 
         Alert.alert(
-          '✅ Mays Récupérés !',
+          'Mays Récupérés !',
           `Vous avez récupéré ${recoveredPoints} Mays !\n\nVotre solde actuel: ${maysPoints + recoveredPoints} Mays`
         );
 
@@ -359,7 +361,10 @@ function QRScannerScreenContent() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      <Text style={styles.title}>📦 Suivi des Bagages</Text>
+      <View style={styles.titleContainer}>
+        <MaterialCommunityIcons name="bag-suitcase" size={28} color="#B22222" />
+        <Text style={styles.title}>Suivi des Bagages</Text>
+      </View>
 
       {/* SUPPRIMÉ : Section Mays avec bouton de récupération */}
 
@@ -403,7 +408,7 @@ function QRScannerScreenContent() {
         currentMode === 'checkin' ? styles.modeCheckin : styles.modeCheckout
       ]}>
         <Text style={styles.modeIndicatorText}>
-          {currentMode === 'checkin' ? '📥 Mode Check-in' : '📤 Mode Check-out'}
+          {currentMode === 'checkin' ? 'Mode Check-in' : 'Mode Check-out'}
         </Text>
         <Text style={styles.modeDescription}>
           {currentMode === 'checkin'
@@ -439,7 +444,9 @@ function QRScannerScreenContent() {
                 baggage.status === 'checked_out' && styles.checkedOutCard
               ]}>
                 <View style={styles.baggageHeader}>
-                  <Text style={styles.baggageId}>🛄 {baggage.id}</Text>
+                  <Text style={styles.baggageId}>
+                    <MaterialCommunityIcons name="barcode-scan" size={16} color="#333" /> {baggage.id}
+                  </Text>
                   <Text style={[
                     styles.baggageStatus,
                     baggage.status === 'checked_in' && styles.statusCheckin,
@@ -448,14 +455,23 @@ function QRScannerScreenContent() {
                     {baggage.status === 'checked_in' ? 'En attente' : 'Livré'}
                   </Text>
                 </View>
-                <Text style={styles.baggagePassenger}>👤 {baggage.passengerName}</Text>
-                <Text style={styles.baggageFlight}>✈️ {baggage.flight}</Text>
+                <View style={styles.baggageRow}>
+                  <MaterialCommunityIcons name="account" size={14} color="#666" />
+                  <Text style={styles.baggagePassenger}> {baggage.passengerName}</Text>
+                </View>
+                <View style={styles.baggageRow}>
+                  <MaterialCommunityIcons name="airplane" size={14} color="#888" />
+                  <Text style={styles.baggageFlight}> {baggage.flight}</Text>
+                </View>
                 <Text style={styles.baggageTime}>
                   Check-in: {baggage.checkinTime}
                   {baggage.checkoutTime && `\nCheck-out: ${baggage.checkoutTime}`}
                 </Text>
                 {baggage.status === 'checked_out' && (
-                  <Text style={styles.validationIndicator}>✅ Données vérifiées</Text>
+                  <View style={styles.validationContainer}>
+                    <MaterialCommunityIcons name="check-circle" size={14} color="#2E7D32" />
+                    <Text style={styles.validationIndicator}> Données vérifiées</Text>
+                  </View>
                 )}
               </View>
             ))}
@@ -475,7 +491,7 @@ function QRScannerScreenContent() {
         />
         <View style={styles.scanFrame}>
           <Text style={styles.scanText}>
-            {scanned ? '✅ Code scanné' : '📱 Scanner le QR code'}
+            {scanned ? 'Code scanné' : 'Scanner le QR code'}
           </Text>
           <Text style={styles.scanSubtext}>
             {scanned ? 'Traitement en cours...' : 'Placez le code dans le cadre'}
@@ -486,7 +502,8 @@ function QRScannerScreenContent() {
       {/* Indicateur de délai */}
       {scanned && (
         <View style={styles.delayIndicator}>
-          <Text style={styles.delayText}>⏳ Attendez 3 secondes avant le prochain scan</Text>
+          <MaterialCommunityIcons name="timer-sand" size={16} color="white" />
+          <Text style={styles.delayText}> Attendez 3 secondes...</Text>
         </View>
       )}
 
@@ -502,12 +519,26 @@ function QRScannerScreenContent() {
         <TouchableOpacity style={styles.clearButton} onPress={clearAllData}>
           <Text style={styles.clearButtonText}>Effacer Tout</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity style={styles.claimButton} onPress={() => setShowClaimModal(true)}>
+          <MaterialCommunityIcons name="alert-circle" size={18} color="#B22222" />
+          <Text style={styles.claimButtonText}>Signaler un problème</Text>
+        </TouchableOpacity>
       </View>
+
+      {/* Baggage Claim Modal */}
+      <BaggageClaimModal
+        visible={showClaimModal}
+        onClose={() => setShowClaimModal(false)}
+      />
 
       {/* Historique des scans */}
       <View style={styles.historySection}>
         <View style={styles.historyHeader}>
-          <Text style={styles.historyTitle}>📋 Historique des Scans</Text>
+          <View style={styles.historyTitleRow}>
+            <MaterialCommunityIcons name="clipboard-list" size={18} color="#333" />
+            <Text style={styles.historyTitle}>Historique des Scans</Text>
+          </View>
           <Text style={styles.historyCount}>({scanHistory.length})</Text>
         </View>
 
@@ -773,6 +804,10 @@ const styles = StyleSheet.create({
     padding: 8,
     margin: 10,
     borderRadius: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
   delayText: {
     color: 'white',
@@ -885,6 +920,57 @@ const styles = StyleSheet.create({
   },
 
 
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+    marginTop: 10,
+    gap: 10,
+  },
+  baggageRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+    gap: 6,
+  },
+  validationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E8F5E8',
+    padding: 6,
+    borderRadius: 4,
+    marginTop: 6,
+    gap: 6,
+  },
+  historyTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  message: {
+    fontSize: 16,
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  claimButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#FFF',
+    borderWidth: 2,
+    borderColor: '#B22222',
+    padding: 14,
+    borderRadius: 12,
+  },
+  claimButtonText: {
+    color: '#B22222',
+    fontSize: 14,
+    fontWeight: '700',
+  },
 });
 
 export default function QRScannerScreen() {

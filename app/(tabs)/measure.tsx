@@ -268,7 +268,10 @@ function MeasureScreenContent() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.hTitle}>📏 Mesure valise</Text>
+        <View style={styles.headerRow}>
+          <MaterialIcons name="straighten" size={24} color="#111" />
+          <Text style={styles.hTitle}>Mesure valise</Text>
+        </View>
         <Text style={styles.hSub}>Référence : carte bancaire</Text>
       </View>
 
@@ -380,7 +383,10 @@ function MeasureScreenContent() {
 
           {bagDims && (
             <View style={styles.resultBox}>
-              <Text style={styles.resultTitle}>📦 Dimensions estimées</Text>
+              <View style={styles.resultHeader}>
+                <MaterialIcons name="inventory-2" size={20} color="#065f46" />
+                <Text style={styles.resultTitle}>Dimensions estimées</Text>
+              </View>
               <Text style={styles.resultLine}>Largeur: {bagDims.widthCm.toFixed(1)} cm</Text>
               <Text style={styles.resultLine}>Hauteur: {bagDims.heightCm.toFixed(1)} cm</Text>
 
@@ -428,6 +434,7 @@ const styles = StyleSheet.create({
 
   header: { alignItems: 'center', marginBottom: 10 },
   hTitle: { fontSize: 20, fontWeight: '900', color: '#111' },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   hSub: { fontSize: 12, color: '#6b7280', marginTop: 2 },
 
   card: {
@@ -492,7 +499,8 @@ const styles = StyleSheet.create({
   scaleText: { marginTop: 8, textAlign: 'center', color: '#374151', fontWeight: '700' },
 
   resultBox: { marginTop: 10, backgroundColor: '#ecfdf5', borderRadius: 12, padding: 12 },
-  resultTitle: { fontWeight: '900', color: '#065f46', marginBottom: 6 },
+  resultHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
+  resultTitle: { fontWeight: '900', color: '#065f46' },
   resultLine: { fontWeight: '800', color: '#065f46' },
 
   ruleBox: { marginTop: 10, padding: 10, backgroundColor: '#fff', borderRadius: 12 },

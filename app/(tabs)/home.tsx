@@ -103,9 +103,7 @@ export default function HomeScreen() {
   const [showFlightList, setShowFlightList] = useState(false);
   const [hasShownPopup, setHasShownPopup] = useState(false);
 
-  // Animations
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const floatAnim = useRef(new Animated.Value(0)).current;
+  // Fade animation only for initial load
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   // Horloge temps réel
@@ -156,25 +154,7 @@ export default function HomeScreen() {
 
   // Animations
   useEffect(() => {
-    Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }).start();
-
-    const pulse = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.06, duration: 1200, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 1200, useNativeDriver: true }),
-      ])
-    );
-    pulse.start();
-
-    const float = Animated.loop(
-      Animated.sequence([
-        Animated.timing(floatAnim, { toValue: -6, duration: 2000, useNativeDriver: true }),
-        Animated.timing(floatAnim, { toValue: 0, duration: 2000, useNativeDriver: true }),
-      ])
-    );
-    float.start();
-
-    return () => { pulse.stop(); float.stop(); };
+    Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
   }, []);
 
   const handleLogin = useCallback(() => {
@@ -405,18 +385,18 @@ export default function HomeScreen() {
 
         {/* Countdown */}
         {flightInfo && (
-          <Animated.View style={[styles.countdownCard, { transform: [{ scale: pulseAnim }] }]}>
+          <View style={styles.countdownCard}>
             <MaterialCommunityIcons name="timer-sand" size={20} color="#D4AF37" />
             <Text style={styles.countdownLabel}>Embarquement dans</Text>
             <Text style={styles.countdownValue}>{formatTimeRemaining(flightInfo.boardingTime)}</Text>
-          </Animated.View>
+          </View>
         )}
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
         {/* Smart Assistant Card */}
-        <Animated.View style={{ transform: [{ translateY: floatAnim }] }}>
+        <View>
           <TouchableOpacity
             style={styles.smartCard}
             onPress={() => setShowSmartAssistant(true)}
@@ -435,13 +415,13 @@ export default function HomeScreen() {
                   </View>
                 </View>
                 <Text style={styles.smartSubtitle}>
-                  {securityInfo ? `🛡️ Sécurité: ${securityInfo.currentWaitTime} min` : 'Analyse temps réel'}
+                  {securityInfo ? `Sécurité: ${securityInfo.currentWaitTime} min` : 'Analyse temps réel'}
                 </Text>
               </View>
             </View>
             <MaterialCommunityIcons name="chevron-right" size={24} color="#B22222" />
           </TouchableOpacity>
-        </Animated.View>
+        </View>
 
         {/* Stats */}
         <View style={styles.statsGrid}>

@@ -310,7 +310,7 @@ export function calculateMultipleRoutes(
 
     routes.push({
         id: 'fastest',
-        name: '🚀 Le plus rapide',
+        name: 'Le plus rapide',
         route: {
             steps: fastestSteps,
             totalTime: fastestTime,
@@ -320,7 +320,7 @@ export function calculateMultipleRoutes(
         },
         isFastest: true,
         isLeastCrowded: false,
-        recommendation: '✅ Ce chemin est le plus rapide !',
+        recommendation: 'Ce chemin est le plus rapide',
         timeDifference: 0,
     });
 
@@ -337,16 +337,16 @@ export function calculateMultipleRoutes(
         const timeDiff = altTime - fastestTime;
         let recommendation = '';
         if (altCrowd < fastestCrowd - 10) {
-            recommendation = `🌿 Moins de monde (+${timeDiff}min)`;
+            recommendation = `Moins de monde (+${timeDiff}min)`;
         } else if (timeDiff > 5) {
-            recommendation = `⚠️ Va vous retarder de ${timeDiff}min`;
+            recommendation = `Va vous retarder de ${timeDiff}min`;
         } else {
-            recommendation = `⏱️ Similaire au plus rapide`;
+            recommendation = `Similaire au plus rapide`;
         }
 
         routes.push({
             id: 'alternative',
-            name: '🌿 Moins de foule',
+            name: 'Moins de foule',
             route: {
                 steps: altSteps,
                 totalTime: altTime,
@@ -378,7 +378,7 @@ export function calculateMultipleRoutes(
 
         routes.push({
             id: 'scenic',
-            name: '🛍️ Via Duty Free',
+            name: 'Via Duty Free',
             route: {
                 steps: scenicSteps,
                 totalTime: scenicTime,
@@ -389,8 +389,8 @@ export function calculateMultipleRoutes(
             isFastest: false,
             isLeastCrowded: false,
             recommendation: timeDiff > 10
-                ? `⚠️ Risque de retard (+${timeDiff}min)`
-                : `🛒 Temps pour le shopping (+${timeDiff}min)`,
+                ? `Risque de retard (+${timeDiff}min)`
+                : `Temps pour le shopping (+${timeDiff}min)`,
             timeDifference: timeDiff,
         });
     }
