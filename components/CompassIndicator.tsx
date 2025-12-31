@@ -28,26 +28,40 @@ export default function CompassIndicator({ targetDirection = 0, size = 140, zone
         }).start();
     }, [heading]);
 
-    const _subscribe = () => {
-        Magnetometer.setUpdateInterval(100);
-        const sub = Magnetometer.addListener((data) => {
-            let angle = Math.atan2(data.y, data.x) * (180 / Math.PI);
-            angle = (angle + 360) % 360;
-            setHeading(Math.round(angle));
-        });
-        setSubscription(sub);
+    const _subscribe = async () => {
+        try {
+            const isAvailable = await Magnetometer.isAvailableAsync();
+            if (!isAvailable) {
+                console.log('Magnetometer not available');
+                return;
+            }
+
+            Magnetometer.setUpdateInterval(100);
+            const sub = Magnetometer.addListener((data) => {
+                let angle = Math.atan2(data.y, data.x) * (180 / Math.PI);
+                angle = (angle + 360) % 360;
+                setHeading(Math.round(angle));
+            });
+            setSubscription(sub);
+        } catch (error) {
+            console.log('Error checking/subscribing to magnetometer:', error);
+        }
     };
 
     const _unsubscribe = () => {
-        subscription && subscription.remove();
-        setSubscription(null);
+        try {
+            subscription && subscription.remove();
+            setSubscription(null);
+        } catch (error) {
+            console.log('Error unsubscribing:', error);
+        }
     };
 
     // Calculate the angle to point to target
     const targetRotation = ((targetDirection - heading + 360) % 360);
 
     return (
-        <View style={[styles.container, { width: size, height: size }]}>
+        <View style={styles.container}>
             {/* Outer Ring */}
             <View style={[styles.outerRing, { width: size, height: size, borderRadius: size / 2 }]}>
                 {/* Direction Arrow - Points to next destination */}
@@ -115,7 +129,7 @@ const styles = StyleSheet.create({
         borderColor: '#B22222',
     },
     destinationLabel: {
-        marginTop: 12,
+        marginTop: 16,
         backgroundColor: '#B22222',
         paddingHorizontal: 16,
         paddingVertical: 8,

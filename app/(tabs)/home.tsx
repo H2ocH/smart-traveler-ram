@@ -1,26 +1,26 @@
 import SmartAssistantModal from '@/components/SmartAssistantModal';
 import { usePassenger } from '@/context/PassengerContext';
 import {
-    formatTimeRemaining,
-    formatTimeWithSeconds,
-    generateFlightForNumber,
-    generateSecurityZones,
-    getCurrentTime,
+  formatTimeRemaining,
+  formatTimeWithSeconds,
+  generateFlightForNumber,
+  generateSecurityZones,
+  getCurrentTime,
 } from '@/data/airportDatabase';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    Animated,
-    Dimensions,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Animated,
+  Dimensions,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -117,7 +117,7 @@ export default function HomeScreen() {
   // Charger les données du vol quand le passager est connecté
   useEffect(() => {
     if (passenger.isLoggedIn && passenger.flightNumber) {
-      const flight = generateFlightForNumber(passenger.flightNumber);
+      const flight = generateFlightForNumber(passenger.flightNumber, passenger.destination, passenger.destinationCode);
       setFlightInfo(flight);
 
       const security = generateSecurityZones();
@@ -140,7 +140,7 @@ export default function HomeScreen() {
 
     const interval = setInterval(() => {
       if (passenger.flightNumber) {
-        const flight = generateFlightForNumber(passenger.flightNumber);
+        const flight = generateFlightForNumber(passenger.flightNumber, passenger.destination, passenger.destinationCode);
         setFlightInfo(flight);
 
         const security = generateSecurityZones();
@@ -174,6 +174,8 @@ export default function HomeScreen() {
     } else {
       setPassenger({
         flightNumber: flight.number,
+        destination: flight.destination,
+        destinationCode: flight.code,
         passengerName: passengerName.trim(),
         seatNumber: `${Math.floor(Math.random() * 30) + 1}${['A', 'B', 'C', 'D', 'E', 'F'][Math.floor(Math.random() * 6)]}`,
         loyaltyTier: ['standard', 'silver', 'gold', 'platinum'][Math.floor(Math.random() * 4)] as any,
@@ -300,6 +302,8 @@ export default function HomeScreen() {
         onClose={() => setShowSmartAssistant(false)}
         flightNumber={passenger.flightNumber}
         loyaltyTier={passenger.loyaltyTier}
+        destination={passenger.destination}
+        destinationCode={passenger.destinationCode}
       />
 
       {/* Header */}

@@ -4,6 +4,8 @@ interface PassengerData {
     flightNumber: string;
     passengerName: string;
     seatNumber: string;
+    destination?: string;
+    destinationCode?: string;
     loyaltyTier: 'standard' | 'silver' | 'gold' | 'platinum';
     hasCheckedBag: boolean;
     isLoggedIn: boolean;

@@ -35,9 +35,11 @@ interface Props {
     onClose: () => void;
     flightNumber: string;
     loyaltyTier: string;
+    destination?: string;
+    destinationCode?: string;
 }
 
-export default function SmartAssistantModal({ visible, onClose, flightNumber, loyaltyTier }: Props) {
+export default function SmartAssistantModal({ visible, onClose, flightNumber, loyaltyTier, destination, destinationCode }: Props) {
     const [currentTime, setCurrentTime] = useState(getCurrentTime());
     const [myFlight, setMyFlight] = useState<Flight | null>(null);
     const [routeOptions, setRouteOptions] = useState<RouteOption[]>([]);
@@ -72,7 +74,7 @@ export default function SmartAssistantModal({ visible, onClose, flightNumber, lo
     // Initialization
     useEffect(() => {
         if (visible && flightNumber) {
-            const flight = generateFlightForNumber(flightNumber);
+            const flight = generateFlightForNumber(flightNumber, destination, destinationCode);
             setMyFlight(flight);
 
             const gateId = getGateZoneId(flight.newGate || flight.gate);
@@ -292,7 +294,6 @@ export default function SmartAssistantModal({ visible, onClose, flightNumber, lo
                                 size={150}
                                 zoneName={currentStep.zoneName}
                             />
-                            <Text style={styles.compassInstruction}>{currentStep.instruction}</Text>
                             <View style={styles.compassMeta}>
                                 <View style={styles.compassMetaItem}>
                                     <MaterialCommunityIcons name="walk" size={16} color="#64748B" />

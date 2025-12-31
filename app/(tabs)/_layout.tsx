@@ -80,6 +80,48 @@ export default function TabLayout() {
             ),
           }}
         />
+        <Tabs.Screen
+          name="baggage-lost"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="baggage-damaged"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="index"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="modal"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="RAM.code-workspace"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="resume.tex"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="my-resume.cls"
+          options={{
+            href: null,
+          }}
+        />
       </Tabs>
     </GestureHandlerRootView>
   );

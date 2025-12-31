@@ -329,7 +329,7 @@ export const formatTimeWithSeconds = (date: Date): string => {
 };
 
 // Génère un vol pour n'importe quel numéro de vol saisi
-export const generateFlightForNumber = (flightNumber: string): Flight => {
+export const generateFlightForNumber = (flightNumber: string, knownDestination?: string, knownCode?: string): Flight => {
     const now = getCurrentTime();
     const timeSeed = Math.floor(now.getTime() / 10000);
 
@@ -350,8 +350,12 @@ export const generateFlightForNumber = (flightNumber: string): Flight => {
         { name: 'Bruxelles', code: 'BRU' },
     ];
 
-    const destIndex = flightSeed % destinations.length;
-    const dest = destinations[destIndex];
+    let dest = destinations[flightSeed % destinations.length];
+
+    // Override if known destination provided
+    if (knownDestination && knownCode) {
+        dest = { name: knownDestination, code: knownCode };
+    }
 
     // Calcul des heures basées sur le vol
     const baseOffset = 50 + (flightSeed % 60); // 50-110 minutes
