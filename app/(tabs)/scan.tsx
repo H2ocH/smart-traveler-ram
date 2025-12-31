@@ -520,10 +520,12 @@ function QRScannerScreenContent() {
           <Text style={styles.clearButtonText}>Effacer Tout</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.claimButton} onPress={() => setShowClaimModal(true)}>
-          <MaterialCommunityIcons name="alert-circle" size={18} color="#B22222" />
-          <Text style={styles.claimButtonText}>Signaler un problème</Text>
-        </TouchableOpacity>
+        {currentMode === 'checkout' && (
+          <TouchableOpacity style={styles.claimButton} onPress={() => setShowClaimModal(true)}>
+            <MaterialCommunityIcons name="alert-circle" size={18} color="#B22222" />
+            <Text style={styles.claimButtonText}>Bagage non trouvé ?</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Baggage Claim Modal */}
