@@ -170,7 +170,7 @@ export default function HomeScreen() {
         destinationCode: generated.destinationCode,
         passengerName: passengerName.trim(),
         seatNumber: `${Math.floor(Math.random() * 30) + 1}${['A', 'B', 'C', 'D', 'E', 'F'][Math.floor(Math.random() * 6)]}`,
-        loyaltyTier: ['standard', 'silver', 'gold', 'platinum'][Math.floor(Math.random() * 4)] as any,
+        loyaltyTier: 'standard', // Force standard pour démo navigation
         hasCheckedBag: Math.random() > 0.5,
         isLoggedIn: true,
       });
@@ -181,7 +181,7 @@ export default function HomeScreen() {
         destinationCode: flight.code,
         passengerName: passengerName.trim(),
         seatNumber: `${Math.floor(Math.random() * 30) + 1}${['A', 'B', 'C', 'D', 'E', 'F'][Math.floor(Math.random() * 6)]}`,
-        loyaltyTier: ['standard', 'silver', 'gold', 'platinum'][Math.floor(Math.random() * 4)] as any,
+        loyaltyTier: 'standard', // Force standard pour démo navigation
         hasCheckedBag: Math.random() > 0.5,
         isLoggedIn: true,
       });
@@ -198,7 +198,7 @@ export default function HomeScreen() {
   if (!hydrated) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
-        <View style={[styles.loginForm, { width: '100%', maxWidth: 360 }]}> 
+        <View style={[styles.loginForm, { width: '100%', maxWidth: 360 }]}>
           <View style={{ alignItems: 'center', gap: 12 }}>
             <View style={styles.logoCircle}>
               <MaterialCommunityIcons name="progress-clock" size={40} color="#B22222" />

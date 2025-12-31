@@ -49,19 +49,8 @@ export default function SmartAssistantModal({ visible, onClose, flightNumber, lo
 
     const isVIP = loyaltyTier === 'gold' || loyaltyTier === 'platinum';
 
-    // Refresh real-time data every 3 seconds
-    useEffect(() => {
-        const interval = setInterval(() => {
-            if (flightNumber && myFlight) {
-                const gateId = getGateZoneId(myFlight.newGate || myFlight.gate);
-                // Force crowd if toggle is On
-                const newRoutes = calculateMultipleRoutes('entrance', gateId, isVIP, isCrowdSimulated);
-                setRouteOptions(newRoutes);
-            }
-        }, 3000);
-
-        return () => clearInterval(interval);
-    }, [flightNumber, myFlight, isVIP, isCrowdSimulated]);
+    // Real-time data refresh removed to stabilize route time as requested. 
+    // Routes will only update when flightNumber, isVIP, or isCrowdSimulated changes (via the Initialization effect below).
 
     // Real-time clock
     useEffect(() => {
@@ -110,18 +99,23 @@ export default function SmartAssistantModal({ visible, onClose, flightNumber, lo
         }
     }, [routeOptions, selectedRouteIndex, currentNavStep, advanceStep, baggageValidated]);
 
-    const handleScanBaggage = () => {
+    const handleScanBaggage = (isCheckout: boolean = false) => {
         // Simulate QR scan
+        const title = isCheckout ? 'Récupération Bagage' : 'Scanner votre bagage';
+        const message = isCheckout
+            ? 'Scannez le QR code pour valider la récupération de votre bagage.'
+            : 'Veuillez scanner le QR code de votre étiquette bagage pour confirmer le dépôt.';
+
         Alert.alert(
-            'Scanner votre bagage',
-            'Veuillez scanner le QR code de votre étiquette bagage pour confirmer le dépôt.',
+            title,
+            message,
             [
                 { text: 'Annuler', style: 'cancel' },
                 {
                     text: 'Scanner',
                     onPress: () => {
                         onClose();
-                        router.push('/scan');
+                        router.push({ pathname: '/scan', params: { mode: isCheckout ? 'checkout' : 'checkin' } });
                     }
                 },
                 {
@@ -130,9 +124,14 @@ export default function SmartAssistantModal({ visible, onClose, flightNumber, lo
                         setBaggageValidated(true);
                         setShowBaggageScan(false);
                         Vibration.vibrate([0, 100, 50, 100]);
-                        Alert.alert('Bagage validé', 'Votre bagage a été enregistré avec succès !');
-                        // Move to next step
-                        setCurrentNavStep(prev => prev + 1);
+                        Alert.alert('Succès', isCheckout ? 'Bagage récupéré !' : 'Bagage enregistré !');
+
+                        if (!isCheckout) {
+                            setCurrentNavStep(prev => prev + 1);
+                        } else {
+                            // End of journey logic if needed
+                            onClose();
+                        }
                     }
                 }
             ]
@@ -317,7 +316,7 @@ export default function SmartAssistantModal({ visible, onClose, flightNumber, lo
                                 fontWeight: '600',
                                 marginBottom: 4
                             }}>
-                                Prochaine étape
+                                {isLastStep ? 'Destination' : 'Prochaine étape'}
                             </Text>
 
                             <Text style={{
@@ -330,19 +329,70 @@ export default function SmartAssistantModal({ visible, onClose, flightNumber, lo
                                 {currentStep.zoneName}
                             </Text>
 
-                            <View style={styles.compassMeta}>
-                                <View style={styles.compassMetaItem}>
-                                    <MaterialCommunityIcons name="walk" size={20} color="#64748B" />
-                                    <Text style={[styles.compassMetaText, { fontSize: 18 }]}>{currentStep.distance}</Text>
+                            {!isLastStep && (
+                                <View style={styles.compassMeta}>
+                                    <View style={styles.compassMetaItem}>
+                                        <MaterialCommunityIcons name="walk" size={20} color="#64748B" />
+                                        <Text style={[styles.compassMetaText, { fontSize: 18 }]}>{currentStep.distance}</Text>
+                                    </View>
+                                    <View style={styles.compassMetaItem}>
+                                        <MaterialCommunityIcons name="clock-outline" size={20} color="#64748B" />
+                                        <Text style={[styles.compassMetaText, { fontSize: 18 }]}>~{currentStep.estimatedTime} min</Text>
+                                    </View>
                                 </View>
-                                <View style={styles.compassMetaItem}>
-                                    <MaterialCommunityIcons name="clock-outline" size={20} color="#64748B" />
-                                    <Text style={[styles.compassMetaText, { fontSize: 18 }]}>~{currentStep.estimatedTime} min</Text>
+                            )}
+
+                            {/* LAST STEP ACTIONS (Checkout / Claim) */}
+                            {isLastStep && (
+                                <View style={{ width: '100%', marginTop: 10, gap: 10 }}>
+                                    <TouchableOpacity
+                                        style={{ backgroundColor: '#22C55E', padding: 15, borderRadius: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
+                                        onPress={() => handleScanBaggage(true)}
+                                    >
+                                        <MaterialCommunityIcons name="qrcode-scan" size={20} color="white" style={{ marginRight: 8 }} />
+                                        <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16 }}>Scanner QR (Check-out)</Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        style={{ backgroundColor: '#EF4444', padding: 15, borderRadius: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
+                                        onPress={() => {
+                                            onClose();
+                                            router.push('/baggage-lost'); // Assuming route exists or open modal
+                                            // Since baggage-lost route is hidden but accessible via router logic mentioned in step 409
+                                        }}
+                                    >
+                                        <MaterialCommunityIcons name="bag-suitcase-off" size={20} color="white" style={{ marginRight: 8 }} />
+                                        <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16 }}>Réclamer (Perdu/Endommagé)</Text>
+                                    </TouchableOpacity>
                                 </View>
-                            </View>
+                            )}
                         </View>
                     )}
 
+
+
+                    {/* Route Steps Preview */}
+                    {selectedRoute && (
+                        <View style={{ marginTop: 24, paddingHorizontal: 4, paddingBottom: 20 }}>
+                            <Text style={{ fontSize: 16, fontWeight: '700', color: '#1E293B', marginBottom: 12 }}>
+                                Détails du Trajet ({selectedRoute.route.steps.length} étapes)
+                            </Text>
+                            {selectedRoute.route.steps.map((step, index) => {
+                                const isActive = currentNavStep === index;
+                                const isDone = currentNavStep > index;
+                                return (
+                                    <View key={index} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, opacity: isDone ? 0.6 : 1, backgroundColor: isActive ? '#FEF2F2' : 'transparent', padding: 8, borderRadius: 8 }}>
+                                        <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: isActive ? '#B22222' : (isDone ? '#10B981' : '#CBD5E1'), marginRight: 12, borderWidth: isActive ? 2 : 0, borderColor: '#FCA5A5' }} />
+                                        <View style={{ flex: 1 }}>
+                                            <Text style={{ fontSize: 14, fontWeight: isActive ? '700' : '500', color: isActive ? '#991B1B' : '#334155' }}>{step.zoneName}</Text>
+                                            {step.crowdWarning === 'high' && <Text style={{ fontSize: 10, color: '#DC2626', fontWeight: 'bold' }}>Foule intense</Text>}
+                                        </View>
+                                        <Text style={{ fontSize: 12, color: '#64748B' }}>{step.estimatedTime} min</Text>
+                                    </View>
+                                );
+                            })}
+                        </View>
+                    )}
 
                     {/* Baggage Scan Prompt */}
                     {showBaggageScan && (
@@ -354,7 +404,7 @@ export default function SmartAssistantModal({ visible, onClose, flightNumber, lo
                             <Text style={styles.baggagePromptText}>
                                 Scannez le QR code de votre étiquette bagage pour valider le dépôt
                             </Text>
-                            <TouchableOpacity style={styles.baggageScanBtn} onPress={handleScanBaggage}>
+                            <TouchableOpacity style={styles.baggageScanBtn} onPress={() => handleScanBaggage(false)}>
                                 <MaterialCommunityIcons name="qrcode" size={22} color="#fff" />
                                 <Text style={styles.baggageScanBtnText}>Scanner le QR code</Text>
                             </TouchableOpacity>

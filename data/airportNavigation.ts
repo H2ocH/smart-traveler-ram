@@ -157,8 +157,12 @@ export function findOptimalPath(
             cost += neighbor.waitTime; // Temps d'attente
 
             // Les VIP peuvent utiliser les files prioritaires
-            if (isVIP && neighbor.type === 'security' && neighbor.id.includes('priority')) {
-                cost *= 0.3; // Réduction significative
+            if (neighbor.type === 'security' && neighbor.id.includes('priority')) {
+                if (isVIP) {
+                    cost *= 0.3; // Réduction significative pour VIP
+                } else {
+                    cost += 500; // Pénalité MASSIVE pour non-VIP pour forcer le passage par A (Standard)
+                }
             }
 
             const newDistance = distances[current] + cost;

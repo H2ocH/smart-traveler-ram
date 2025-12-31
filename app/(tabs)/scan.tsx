@@ -6,22 +6,26 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    Alert,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    Vibration,
-    View
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  Vibration,
+  View
 } from 'react-native';
 
+import { useLocalSearchParams } from 'expo-router';
+// ... previous imports ...
+
 function QRScannerScreenContent() {
+  const { mode } = useLocalSearchParams();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [scanHistory, setScanHistory] = useState<any[]>([]);
   const [baggages, setBaggages] = useState<any[]>([]);
-  const [currentMode, setCurrentMode] = useState('checkin');
+  const [currentMode, setCurrentMode] = useState(mode === 'checkout' ? 'checkout' : 'checkin');
   const [maysPoints, setMaysPoints] = useState(0);
   const [showClaimModal, setShowClaimModal] = useState(false);
 
