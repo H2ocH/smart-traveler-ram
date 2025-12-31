@@ -24,7 +24,7 @@ export default function RequireAuth({ children }: Props) {
                     </Text>
                     <TouchableOpacity
                         style={styles.button}
-                        onPress={() => router.replace('/')}
+                        onPress={() => router.replace('/home')}
                         activeOpacity={0.9}
                     >
                         <MaterialCommunityIcons name="home" size={20} color="#fff" />
