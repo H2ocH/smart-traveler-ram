@@ -522,11 +522,7 @@ function QRScannerScreenContent() {
 
       </View>
 
-      {currentMode === 'checkout' && (
-        <TouchableOpacity style={styles.claimLink} onPress={() => setShowClaimModal(true)}>
-          <Text style={styles.claimLinkText}>Bagage introuvable ? Réclamer ici</Text>
-        </TouchableOpacity>
-      )}
+
 
       {/* Baggage Claim Modal */}
       <BaggageClaimModal
@@ -569,6 +565,13 @@ function QRScannerScreenContent() {
           )}
         </View>
       </View>
+
+      {currentMode === 'checkout' && (
+        <TouchableOpacity style={styles.claimLink} onPress={() => setShowClaimModal(true)}>
+          <Text style={styles.claimLinkText}>Bagage introuvable ? Réclamer ici</Text>
+        </TouchableOpacity>
+      )}
+
       <View style={styles.logoContainer}>
         <Image
           source={require('../../assets/images/logo.jpg')}

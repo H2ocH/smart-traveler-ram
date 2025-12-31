@@ -62,7 +62,7 @@ export default function CompassIndicator({ targetDirection = 0, size = 140, zone
 
                 {/* Center Circle */}
                 <View style={styles.centerCircle}>
-                    <MaterialCommunityIcons name="walk" size={24} color="#B22222" />
+                    <Text style={styles.headingText}>{heading}°</Text>
                 </View>
             </View>
 
@@ -125,5 +125,10 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 14,
         fontWeight: '700',
+    },
+    headingText: {
+        fontSize: 16,
+        fontWeight: '900',
+        color: '#B22222',
     },
 });
