@@ -56,24 +56,28 @@ const AIRPORT_ZONES: AirportZone[] = [
     { id: 'gate_c2', name: 'Porte C2', type: 'gate', location: { x: 7, y: 2 }, crowdLevel: 15, waitTime: 0, isOpen: true, connections: ['corridor_upper'], icon: 'gate', floor: 1 },
 ];
 
-// Simuler les données de capteurs en temps réel
+// Simuler les données de capteurs en temps réel avec variations aléatoires
 export function getRealtimeZoneData(): AirportZone[] {
     const now = new Date();
     const hour = now.getHours();
-    const minute = now.getMinutes();
+    const seconds = now.getSeconds();
 
-    // Facteur de variation basé sur l'heure
-    const peakFactor = (hour >= 6 && hour <= 9) || (hour >= 17 && hour <= 21) ? 1.5 : 1;
+    // Facteur de variation basé sur l'heure (heures de pointe)
+    const peakFactor = (hour >= 6 && hour <= 9) || (hour >= 17 && hour <= 21) ? 1.4 : 1;
 
     return AIRPORT_ZONES.map(zone => {
-        // Variation aléatoire réaliste
-        const variation = (Math.sin(minute * 0.1 + zone.id.charCodeAt(0)) + 1) * 15;
-        let newCrowdLevel = Math.min(100, Math.max(5, zone.crowdLevel * peakFactor + variation - 15));
+        // Variation aléatoire qui change chaque seconde (simulation capteurs temps réel)
+        const randomFactor = Math.random() * 25 - 12; // Entre -12 et +13
+        const timeVariation = Math.sin(seconds * 0.15 + zone.id.charCodeAt(0)) * 18;
+
+        let newCrowdLevel = Math.min(95, Math.max(8,
+            zone.crowdLevel * peakFactor + timeVariation + randomFactor
+        ));
 
         // Recalculer le temps d'attente basé sur la foule
         let newWaitTime = zone.waitTime;
         if (zone.type === 'security' || zone.type === 'passport' || zone.type === 'checkin') {
-            newWaitTime = Math.round(newCrowdLevel / 5);
+            newWaitTime = Math.round(newCrowdLevel / 4);
         }
 
         return {
@@ -111,7 +115,8 @@ export function findOptimalPath(
     zones: AirportZone[],
     startId: string,
     endId: string,
-    isVIP: boolean = false
+    isVIP: boolean = false,
+    avoidZones: string[] = []
 ): string[] {
     const visited = new Set<string>();
     const distances: Record<string, number> = {};
@@ -140,6 +145,7 @@ export function findOptimalPath(
 
         for (const neighborId of currentZone.connections) {
             if (visited.has(neighborId)) continue;
+            if (avoidZones.includes(neighborId)) continue; // Éviter certaines zones
 
             const neighbor = findZone(zones, neighborId);
             if (!neighbor || !neighbor.isOpen) continue;
@@ -235,7 +241,7 @@ export function generateNavigationSteps(zones: AirportZone[], path: string[]): N
             zoneName: zone.name,
             instruction,
             direction,
-            distance: `${(i + 1) * 30}m`, // Estimation simple
+            distance: `${(i + 1) * 30}m`,
             estimatedTime: zone.waitTime + 2,
             crowdWarning,
             alternativeRoute,
@@ -244,6 +250,17 @@ export function generateNavigationSteps(zones: AirportZone[], path: string[]): N
     }
 
     return steps;
+}
+
+// Interface pour routes multiples
+export interface RouteOption {
+    id: string;
+    name: string;
+    route: OptimalRoute;
+    isFastest: boolean;
+    isLeastCrowded: boolean;
+    recommendation: string;
+    timeDifference: number; // Différence avec la route la plus rapide
 }
 
 // Calculer la route optimale complète
@@ -261,7 +278,7 @@ export function calculateOptimalRoute(
         steps.reduce((acc, s) => {
             const zone = findZone(zones, s.zoneId);
             return acc + (zone?.crowdLevel || 0);
-        }, 0) / steps.length
+        }, 0) / Math.max(steps.length, 1)
     );
 
     return {
@@ -271,6 +288,114 @@ export function calculateOptimalRoute(
         crowdScore,
         alternativeAvailable: steps.some(s => s.alternativeRoute !== null),
     };
+}
+
+// Générer plusieurs routes alternatives pour comparaison
+export function calculateMultipleRoutes(
+    startZone: string,
+    destinationGate: string,
+    isVIP: boolean = false
+): RouteOption[] {
+    const zones = getRealtimeZoneData();
+    const routes: RouteOption[] = [];
+
+    // Route 1: Chemin optimal (le plus rapide)
+    const fastestPath = findOptimalPath(zones, startZone, destinationGate, isVIP);
+    const fastestSteps = generateNavigationSteps(zones, fastestPath);
+    const fastestTime = fastestSteps.reduce((acc, s) => acc + s.estimatedTime, 0);
+    const fastestCrowd = Math.round(fastestSteps.reduce((acc, s) => {
+        const zone = findZone(zones, s.zoneId);
+        return acc + (zone?.crowdLevel || 0);
+    }, 0) / Math.max(fastestSteps.length, 1));
+
+    routes.push({
+        id: 'fastest',
+        name: '🚀 Le plus rapide',
+        route: {
+            steps: fastestSteps,
+            totalTime: fastestTime,
+            totalDistance: `${fastestPath.length * 30}m`,
+            crowdScore: fastestCrowd,
+            alternativeAvailable: false,
+        },
+        isFastest: true,
+        isLeastCrowded: false,
+        recommendation: '✅ Ce chemin est le plus rapide !',
+        timeDifference: 0,
+    });
+
+    // Route 2: Éviter la sécurité principale (si possible)
+    const alternativePath = findOptimalPath(zones, startZone, destinationGate, isVIP, ['security_main']);
+    if (alternativePath.length > 0 && alternativePath.join(',') !== fastestPath.join(',')) {
+        const altSteps = generateNavigationSteps(zones, alternativePath);
+        const altTime = altSteps.reduce((acc, s) => acc + s.estimatedTime, 0);
+        const altCrowd = Math.round(altSteps.reduce((acc, s) => {
+            const zone = findZone(zones, s.zoneId);
+            return acc + (zone?.crowdLevel || 0);
+        }, 0) / Math.max(altSteps.length, 1));
+
+        const timeDiff = altTime - fastestTime;
+        let recommendation = '';
+        if (altCrowd < fastestCrowd - 10) {
+            recommendation = `🌿 Moins de monde (+${timeDiff}min)`;
+        } else if (timeDiff > 5) {
+            recommendation = `⚠️ Va vous retarder de ${timeDiff}min`;
+        } else {
+            recommendation = `⏱️ Similaire au plus rapide`;
+        }
+
+        routes.push({
+            id: 'alternative',
+            name: '🌿 Moins de foule',
+            route: {
+                steps: altSteps,
+                totalTime: altTime,
+                totalDistance: `${alternativePath.length * 30}m`,
+                crowdScore: altCrowd,
+                alternativeAvailable: false,
+            },
+            isFastest: false,
+            isLeastCrowded: altCrowd < fastestCrowd,
+            recommendation,
+            timeDifference: timeDiff,
+        });
+    }
+
+    // Route 3: Via le Duty Free (pour ceux qui ont du temps)
+    const scenicPath = findOptimalPath(zones, startZone, 'duty_free', isVIP);
+    const scenicPath2 = findOptimalPath(zones, 'duty_free', destinationGate, isVIP);
+    const fullScenicPath = [...scenicPath, ...scenicPath2.slice(1)];
+
+    if (fullScenicPath.length > 0 && fullScenicPath.join(',') !== fastestPath.join(',')) {
+        const scenicSteps = generateNavigationSteps(zones, fullScenicPath);
+        const scenicTime = scenicSteps.reduce((acc, s) => acc + s.estimatedTime, 0);
+        const scenicCrowd = Math.round(scenicSteps.reduce((acc, s) => {
+            const zone = findZone(zones, s.zoneId);
+            return acc + (zone?.crowdLevel || 0);
+        }, 0) / Math.max(scenicSteps.length, 1));
+
+        const timeDiff = scenicTime - fastestTime;
+
+        routes.push({
+            id: 'scenic',
+            name: '🛍️ Via Duty Free',
+            route: {
+                steps: scenicSteps,
+                totalTime: scenicTime,
+                totalDistance: `${fullScenicPath.length * 30}m`,
+                crowdScore: scenicCrowd,
+                alternativeAvailable: false,
+            },
+            isFastest: false,
+            isLeastCrowded: false,
+            recommendation: timeDiff > 10
+                ? `⚠️ Risque de retard (+${timeDiff}min)`
+                : `🛒 Temps pour le shopping (+${timeDiff}min)`,
+            timeDifference: timeDiff,
+        });
+    }
+
+    return routes;
 }
 
 // Mapper une porte de vol à un ID de zone
