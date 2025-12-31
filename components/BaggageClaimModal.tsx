@@ -98,14 +98,19 @@ export default function BaggageClaimModal({ visible, onClose, baggageId = '' }: 
 
             // Add new claim
             claims.push(claim);
-            await AsyncStorage.setItem('baggageClaims', JSON.stringify(claims));
-
-            Alert.alert(
-                'Réclamation envoyée',
-                `Votre réclamation a été enregistrée avec succès.\n\nNuméro de référence: ${claim.id}\n\nNous vous contacterons sous 24-48h.`,
-                [{ text: 'OK', onPress: () => { resetForm(); onClose(); } }]
-            );
-        } catch (error) {
+            try {
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                Alert.alert(
+                    'Réclamation envoyée',
+                    `Votre réclamation a été enregistrée avec succès.\n\nNuméro de référence: ${claim.id}\n\nNous vous contacterons sous 24-48h.`,
+                    [{ text: 'OK', onPress: () => { resetForm(); onClose(); } }]
+                );
+            } catch {
+                Alert.alert('Erreur', 'Une erreur est survenue. Veuillez réessayer.');
+            } finally {
+                setLoading(false);
+            }
+        } catch {
             Alert.alert('Erreur', 'Une erreur est survenue. Veuillez réessayer.');
         } finally {
             setLoading(false);

@@ -44,7 +44,7 @@ export default function ExploreScreen() {
           <View style={styles.headerContent}>
             <View>
               <Text style={styles.headerTitle}>Services</Text>
-              <Text style={styles.headerSubtitle}>Votre confort à l'aéroport</Text>
+              <Text style={styles.headerSubtitle}>Votre confort à l’aéroport</Text>
             </View>
             <View style={styles.clockBadge}>
               <View style={styles.clockDot} />
@@ -205,7 +205,7 @@ export default function ExploreScreen() {
               <MaterialCommunityIcons name="headphones" size={24} color="#fff" />
             </View>
             <View style={styles.contactText}>
-              <Text style={styles.contactTitle}>Besoin d'aide ?</Text>
+              <Text style={styles.contactTitle}>Besoin d’aide ?</Text>
               <Text style={styles.contactNumber}>+212 522 529 000</Text>
             </View>
             <TouchableOpacity style={styles.callButton}>

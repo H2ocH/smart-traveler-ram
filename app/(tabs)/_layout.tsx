@@ -4,11 +4,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Tabs
@@ -94,30 +91,6 @@ export default function TabLayout() {
         />
         <Tabs.Screen
           name="index"
-          options={{
-            href: null,
-          }}
-        />
-        <Tabs.Screen
-          name="modal"
-          options={{
-            href: null,
-          }}
-        />
-        <Tabs.Screen
-          name="RAM.code-workspace"
-          options={{
-            href: null,
-          }}
-        />
-        <Tabs.Screen
-          name="resume.tex"
-          options={{
-            href: null,
-          }}
-        />
-        <Tabs.Screen
-          name="my-resume.cls"
           options={{
             href: null,
           }}

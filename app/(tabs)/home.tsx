@@ -132,7 +132,7 @@ export default function HomeScreen() {
         }, 1500);
       }
     }
-  }, [passenger.isLoggedIn, passenger.flightNumber, hasShownPopup]);
+  }, [passenger.isLoggedIn, passenger.flightNumber, passenger.destination, passenger.destinationCode, hasShownPopup]);
 
   // Mise à jour périodique des données
   useEffect(() => {
@@ -150,12 +150,12 @@ export default function HomeScreen() {
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [passenger.isLoggedIn, passenger.flightNumber]);
+  }, [passenger.isLoggedIn, passenger.flightNumber, passenger.destination, passenger.destinationCode]);
 
   // Animations
   useEffect(() => {
     Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
-  }, []);
+  }, [fadeAnim]);
 
   const handleLogin = useCallback(() => {
     if (!flightInput.trim() || !passengerName.trim()) return;
