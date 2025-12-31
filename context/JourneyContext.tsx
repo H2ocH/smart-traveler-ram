@@ -68,12 +68,15 @@ interface JourneyContextType {
     getCurrentStep: () => typeof JOURNEY_STEPS[0];
     isStepCompleted: (stepId: string) => boolean;
     lastScanResult: { success: boolean; message: string; stepAdvanced: string | null } | null;
+    navStepIndex: number;
+    setNavStepIndex: (index: number | ((prev: number) => number)) => void;
 }
 
 const JourneyContext = createContext<JourneyContextType | undefined>(undefined);
 
 export function JourneyProvider({ children }: { children: ReactNode }) {
     const [currentStepIndex, setCurrentStepIndex] = useState(0);
+    const [navStepIndex, setNavStepIndex] = useState(0); // Navigation step persistence
     const [completedSteps, setCompletedSteps] = useState<string[]>([]);
     const [lastScanResult, setLastScanResult] = useState<JourneyContextType['lastScanResult']>(null);
 
@@ -135,6 +138,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
 
     const resetJourney = useCallback(() => {
         setCurrentStepIndex(0);
+        setNavStepIndex(0);
         setCompletedSteps([]);
         setLastScanResult(null);
     }, []);
@@ -158,6 +162,8 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
             getCurrentStep,
             isStepCompleted,
             lastScanResult,
+            navStepIndex,
+            setNavStepIndex,
         }}>
             {children}
         </JourneyContext.Provider>

@@ -39,12 +39,12 @@ export default function SmartAssistantModal({ visible, onClose, flightNumber, lo
     const [myFlight, setMyFlight] = useState<Flight | null>(null);
     const [routeOptions, setRouteOptions] = useState<RouteOption[]>([]);
     const [selectedRouteIndex, setSelectedRouteIndex] = useState(0);
-    const [currentNavStep, setCurrentNavStep] = useState(0);
+    // const [currentNavStep, setCurrentNavStep] = useState(0); // Moved to Context
     const [showBaggageScan, setShowBaggageScan] = useState(false);
     const [baggageValidated, setBaggageValidated] = useState(false);
     // isCrowdSimulated removed
 
-    const { advanceStep } = useJourney();
+    const { advanceStep, navStepIndex: currentNavStep, setNavStepIndex: setCurrentNavStep } = useJourney();
 
     const isVIP = loyaltyTier === 'gold' || loyaltyTier === 'platinum';
 
@@ -67,7 +67,7 @@ export default function SmartAssistantModal({ visible, onClose, flightNumber, lo
             const routes = calculateMultipleRoutes('entrance', gateId, isVIP); // Removed forceCrowd
             setRouteOptions(routes);
             setSelectedRouteIndex(0);
-            setCurrentNavStep(0);
+            // setCurrentNavStep(0); // REMOVED to persist progress
             setShowBaggageScan(false);
             setBaggageValidated(false);
         }
