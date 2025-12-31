@@ -32,6 +32,7 @@ export interface OptimalRoute {
     totalDistance: string;
     crowdScore: number; // 0-100, plus bas = moins de foule
     alternativeAvailable: boolean;
+    path: string[];
 }
 
 // Simulation des zones de l'aéroport Mohammed V
@@ -204,18 +205,12 @@ export function generateNavigationSteps(zones: AirportZone[], path: string[]): N
             else if (nextZone.location.y < zone.location.y) direction = 'left';
         }
 
-        // Génerer l'instruction
+        // Génerer l'instruction SIMPLE (sans direction gauche/droite)
         let instruction = '';
         if (isLast) {
-            instruction = `Vous êtes arrivé à ${zone.name}`;
+            instruction = `Vous êtes arrivé à : ${zone.name}`;
         } else {
-            switch (direction) {
-                case 'up': instruction = `Montez vers ${nextZone?.name}`; break;
-                case 'down': instruction = `Descendez vers ${nextZone?.name}`; break;
-                case 'left': instruction = `Tournez à gauche vers ${nextZone?.name}`; break;
-                case 'right': instruction = `Tournez à droite vers ${nextZone?.name}`; break;
-                default: instruction = `Continuez tout droit vers ${nextZone?.name}`;
-            }
+            instruction = `Allez vers : ${nextZone?.name}`;
         }
 
         // Avertissement foule
@@ -287,115 +282,68 @@ export function calculateOptimalRoute(
         totalDistance: `${path.length * 30}m`,
         crowdScore,
         alternativeAvailable: steps.some(s => s.alternativeRoute !== null),
+        path,
     };
 }
 
 // Générer plusieurs routes alternatives pour comparaison
+// Calculer plusieurs itinéraires possibles avec simulation foule optionnelle
 export function calculateMultipleRoutes(
-    startZone: string,
-    destinationGate: string,
-    isVIP: boolean = false
+    startId: string,
+    endId: string,
+    isVIP: boolean,
+    forceCrowd: boolean = false
 ): RouteOption[] {
     const zones = getRealtimeZoneData();
-    const routes: RouteOption[] = [];
+    const currentZones = JSON.parse(JSON.stringify(zones)) as AirportZone[];
 
-    // Route 1: Chemin optimal (le plus rapide)
-    const fastestPath = findOptimalPath(zones, startZone, destinationGate, isVIP);
-    const fastestSteps = generateNavigationSteps(zones, fastestPath);
-    const fastestTime = fastestSteps.reduce((acc, s) => acc + s.estimatedTime, 0);
-    const fastestCrowd = Math.round(fastestSteps.reduce((acc, s) => {
-        const zone = findZone(zones, s.zoneId);
-        return acc + (zone?.crowdLevel || 0);
-    }, 0) / Math.max(fastestSteps.length, 1));
-
-    routes.push({
-        id: 'fastest',
-        name: 'Le plus rapide',
-        route: {
-            steps: fastestSteps,
-            totalTime: fastestTime,
-            totalDistance: `${fastestPath.length * 30}m`,
-            crowdScore: fastestCrowd,
-            alternativeAvailable: false,
-        },
-        isFastest: true,
-        isLeastCrowded: false,
-        recommendation: 'Ce chemin est le plus rapide',
-        timeDifference: 0,
-    });
-
-    // Route 2: Éviter la sécurité principale (si possible)
-    const alternativePath = findOptimalPath(zones, startZone, destinationGate, isVIP, ['security_main']);
-    if (alternativePath.length > 0 && alternativePath.join(',') !== fastestPath.join(',')) {
-        const altSteps = generateNavigationSteps(zones, alternativePath);
-        const altTime = altSteps.reduce((acc, s) => acc + s.estimatedTime, 0);
-        const altCrowd = Math.round(altSteps.reduce((acc, s) => {
-            const zone = findZone(zones, s.zoneId);
-            return acc + (zone?.crowdLevel || 0);
-        }, 0) / Math.max(altSteps.length, 1));
-
-        const timeDiff = altTime - fastestTime;
-        let recommendation = '';
-        if (altCrowd < fastestCrowd - 10) {
-            recommendation = `Moins de monde (+${timeDiff}min)`;
-        } else if (timeDiff > 5) {
-            recommendation = `Va vous retarder de ${timeDiff}min`;
-        } else {
-            recommendation = `Similaire au plus rapide`;
-        }
-
-        routes.push({
-            id: 'alternative',
-            name: 'Moins de foule',
-            route: {
-                steps: altSteps,
-                totalTime: altTime,
-                totalDistance: `${alternativePath.length * 30}m`,
-                crowdScore: altCrowd,
-                alternativeAvailable: false,
-            },
-            isFastest: false,
-            isLeastCrowded: altCrowd < fastestCrowd,
-            recommendation,
-            timeDifference: timeDiff,
+    // SIMULATION FOULE: Si activé, on sature la sécurité principale pour forcer un autre chemin
+    if (forceCrowd) {
+        currentZones.forEach(z => {
+            if (z.id === 'sec-a' || z.id === 'security_main') { // Security A crowded
+                z.crowdLevel = 95;
+                z.waitTime = 45;
+            }
+            if (z.id === 'lounge-atlas') { // Lounge Atlas crowded
+                z.crowdLevel = 90;
+            }
         });
     }
 
-    // Route 3: Via le Duty Free (pour ceux qui ont du temps)
-    const scenicPath = findOptimalPath(zones, startZone, 'duty_free', isVIP);
-    const scenicPath2 = findOptimalPath(zones, 'duty_free', destinationGate, isVIP);
-    const fullScenicPath = [...scenicPath, ...scenicPath2.slice(1)];
+    const options: RouteOption[] = [];
 
-    if (fullScenicPath.length > 0 && fullScenicPath.join(',') !== fastestPath.join(',')) {
-        const scenicSteps = generateNavigationSteps(zones, fullScenicPath);
-        const scenicTime = scenicSteps.reduce((acc, s) => acc + s.estimatedTime, 0);
-        const scenicCrowd = Math.round(scenicSteps.reduce((acc, s) => {
-            const zone = findZone(zones, s.zoneId);
-            return acc + (zone?.crowdLevel || 0);
-        }, 0) / Math.max(scenicSteps.length, 1));
+    // 1. Route Optimale (Standard ou Adaptée Foule)
+    const optimalPath = findOptimalPath(currentZones, startId, endId, isVIP);
 
-        const timeDiff = scenicTime - fastestTime;
+    if (optimalPath.length > 0) {
+        const steps = generateNavigationSteps(currentZones, optimalPath);
+        const totalTime = steps.reduce((acc, step) => acc + step.estimatedTime, 0);
 
-        routes.push({
-            id: 'scenic',
-            name: 'Via Duty Free',
+        // Detecter si on évite la foule (si forceCrowd est actif, c'est l'itinéraire adapté)
+        const name = forceCrowd ? "Itinéraire Malin (Évite Foule)" : "Le plus rapide";
+        const recommendation = forceCrowd
+            ? "Contournement de la sécurité saturée detecté."
+            : "Chemin standard optimal.";
+
+        options.push({
+            id: 'optimal',
+            name: name,
             route: {
-                steps: scenicSteps,
-                totalTime: scenicTime,
-                totalDistance: `${fullScenicPath.length * 30}m`,
-                crowdScore: scenicCrowd,
+                steps,
+                totalTime,
+                path: optimalPath,
+                crowdScore: forceCrowd ? 40 : 20, // Arbitrary for UI
                 alternativeAvailable: false,
+                totalDistance: `${optimalPath.length * 30}m`
             },
-            isFastest: false,
-            isLeastCrowded: false,
-            recommendation: timeDiff > 10
-                ? `Risque de retard (+${timeDiff}min)`
-                : `Temps pour le shopping (+${timeDiff}min)`,
-            timeDifference: timeDiff,
+            isFastest: true,
+            isLeastCrowded: true,
+            recommendation: recommendation,
+            timeDifference: 0
         });
     }
 
-    return routes;
+    return options;
 }
 
 // Mapper une porte de vol à un ID de zone

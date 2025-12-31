@@ -1,4 +1,3 @@
-import CompassIndicator from '@/components/CompassIndicator';
 import { useJourney } from '@/context/JourneyContext';
 import {
     Flight,
@@ -20,6 +19,7 @@ import {
     Modal,
     ScrollView,
     StyleSheet,
+    Switch,
     Text,
     TouchableOpacity,
     Vibration,
@@ -43,6 +43,7 @@ export default function SmartAssistantModal({ visible, onClose, flightNumber, lo
     const [currentNavStep, setCurrentNavStep] = useState(0);
     const [showBaggageScan, setShowBaggageScan] = useState(false);
     const [baggageValidated, setBaggageValidated] = useState(false);
+    const [isCrowdSimulated, setIsCrowdSimulated] = useState(false);
 
     const { advanceStep } = useJourney();
 
@@ -53,13 +54,14 @@ export default function SmartAssistantModal({ visible, onClose, flightNumber, lo
         const interval = setInterval(() => {
             if (flightNumber && myFlight) {
                 const gateId = getGateZoneId(myFlight.newGate || myFlight.gate);
-                const newRoutes = calculateMultipleRoutes('entrance', gateId, isVIP);
+                // Force crowd if toggle is On
+                const newRoutes = calculateMultipleRoutes('entrance', gateId, isVIP, isCrowdSimulated);
                 setRouteOptions(newRoutes);
             }
         }, 3000);
 
         return () => clearInterval(interval);
-    }, [flightNumber, myFlight, isVIP]);
+    }, [flightNumber, myFlight, isVIP, isCrowdSimulated]);
 
     // Real-time clock
     useEffect(() => {
@@ -74,14 +76,14 @@ export default function SmartAssistantModal({ visible, onClose, flightNumber, lo
             setMyFlight(flight);
 
             const gateId = getGateZoneId(flight.newGate || flight.gate);
-            const routes = calculateMultipleRoutes('entrance', gateId, isVIP);
+            const routes = calculateMultipleRoutes('entrance', gateId, isVIP, isCrowdSimulated);
             setRouteOptions(routes);
             setSelectedRouteIndex(0);
             setCurrentNavStep(0);
             setShowBaggageScan(false);
             setBaggageValidated(false);
         }
-    }, [visible, flightNumber, isVIP, destination, destinationCode]);
+    }, [visible, flightNumber, isVIP, isCrowdSimulated, destination, destinationCode]);
 
     const handleClose = () => {
         onClose();
@@ -271,25 +273,76 @@ export default function SmartAssistantModal({ visible, onClose, flightNumber, lo
                 <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={styles.contentContainer}>
 
                     {/* Compass Card */}
+
+                    {/* Crowd Simulation Toggle */}
+                    <View style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        backgroundColor: '#FEF2F2',
+                        padding: 16,
+                        borderRadius: 12,
+                        marginBottom: 20,
+                        borderWidth: 1,
+                        borderColor: '#FCA5A5'
+                    }}>
+                        <View style={{ flex: 1 }}>
+                            <Text style={{ fontSize: 16, fontWeight: '700', color: '#B91C1C' }}>
+                                Simuler Foule / Traffic
+                            </Text>
+                            <Text style={{ fontSize: 12, color: '#EF4444', marginTop: 4 }}>
+                                Activez pour voir comment l'IA change d'itinéraire
+                            </Text>
+                        </View>
+                        <Switch
+                            trackColor={{ false: "#767577", true: "#EF4444" }}
+                            thumbColor={isCrowdSimulated ? "#fff" : "#f4f3f4"}
+                            onValueChange={() => setIsCrowdSimulated(prev => !prev)}
+                            value={isCrowdSimulated}
+                        />
+                    </View>
+
+                    {/* Next Step Card (Replaces Compass) */}
                     {currentStep && (
-                        <View style={styles.compassCard}>
-                            <CompassIndicator
-                                targetDirection={getTargetDirection()}
-                                size={150}
-                                zoneName={currentStep.zoneName}
-                            />
+                        <View style={[styles.compassCard, { height: 'auto', paddingVertical: 24 }]}>
+                            <View style={{ alignItems: 'center', marginBottom: 16 }}>
+                                <MaterialCommunityIcons name={currentStep.icon as any || 'map-marker'} size={48} color="#B22222" />
+                            </View>
+
+                            <Text style={{
+                                fontSize: 14,
+                                color: '#64748B',
+                                textTransform: 'uppercase',
+                                letterSpacing: 1,
+                                fontWeight: '600',
+                                marginBottom: 4
+                            }}>
+                                Prochaine étape
+                            </Text>
+
+                            <Text style={{
+                                fontSize: 24,
+                                fontWeight: '800',
+                                color: '#1E293B',
+                                textAlign: 'center',
+                                marginBottom: 20
+                            }}>
+                                {currentStep.zoneName}
+                            </Text>
+
                             <View style={styles.compassMeta}>
                                 <View style={styles.compassMetaItem}>
-                                    <MaterialCommunityIcons name="walk" size={16} color="#64748B" />
-                                    <Text style={styles.compassMetaText}>{currentStep.distance}</Text>
+                                    <MaterialCommunityIcons name="walk" size={20} color="#64748B" />
+                                    <Text style={[styles.compassMetaText, { fontSize: 18 }]}>{currentStep.distance}</Text>
                                 </View>
                                 <View style={styles.compassMetaItem}>
-                                    <MaterialCommunityIcons name="clock-outline" size={16} color="#64748B" />
-                                    <Text style={styles.compassMetaText}>~{currentStep.estimatedTime} min</Text>
+                                    <MaterialCommunityIcons name="clock-outline" size={20} color="#64748B" />
+                                    <Text style={[styles.compassMetaText, { fontSize: 18 }]}>~{currentStep.estimatedTime} min</Text>
                                 </View>
                             </View>
                         </View>
                     )}
+
 
                     {/* Baggage Scan Prompt */}
                     {showBaggageScan && (
@@ -431,14 +484,16 @@ export default function SmartAssistantModal({ visible, onClose, flightNumber, lo
                 </ScrollView>
 
                 {/* VIP Badge */}
-                {isVIP && (
-                    <View style={styles.vipFooter}>
-                        <MaterialCommunityIcons name="crown" size={16} color="#D4AF37" />
-                        <Text style={styles.vipText}>Accès prioritaire activé</Text>
-                    </View>
-                )}
-            </View>
-        </Modal>
+                {
+                    isVIP && (
+                        <View style={styles.vipFooter}>
+                            <MaterialCommunityIcons name="crown" size={16} color="#D4AF37" />
+                            <Text style={styles.vipText}>Accès prioritaire activé</Text>
+                        </View>
+                    )
+                }
+            </View >
+        </Modal >
     );
 }
 
