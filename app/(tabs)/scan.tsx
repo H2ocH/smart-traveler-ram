@@ -1,4 +1,5 @@
 import RequireAuth from '@/components/RequireAuth';
+import { useJourney } from '@/context/JourneyContext';
 import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -17,13 +18,15 @@ import {
 function QRScannerScreenContent() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
-  const [scanHistory, setScanHistory] = useState([]);
-  const [baggages, setBaggages] = useState([]);
+  const [scanHistory, setScanHistory] = useState<any[]>([]);
+  const [baggages, setBaggages] = useState<any[]>([]);
   const [currentMode, setCurrentMode] = useState('checkin');
   const [maysPoints, setMaysPoints] = useState(0);
   const [recoveryModalVisible, setRecoveryModalVisible] = useState(false);
   const [recoveryCode, setRecoveryCode] = useState('');
 
+  // Connexion avec le Smart Guide
+  const { completeStepByQR } = useJourney();
   const scanTimeoutRef = useRef(null);
   const lastScannedCodeRef = useRef('');
   const lastScanTimeRef = useRef(0);
@@ -154,9 +157,12 @@ function QRScannerScreenContent() {
 
     await earnMays(10);
 
+    // Valider l'étape bagages dans le Smart Guide
+    completeStepByQR('baggage');
+
     Alert.alert(
       '✅ Check-in Réussi',
-      `Bagage ${newBaggage.id} enregistré pour ${newBaggage.passengerName}\n\n+10 Mays! 🎉`,
+      `Bagage ${newBaggage.id} enregistré pour ${newBaggage.passengerName}\n\n+10 Mays! 🎉\n\n📱 Étape "Bagages" validée dans le Smart Guide!`,
       [{ text: 'OK', onPress: resetScanner }]
     );
   };

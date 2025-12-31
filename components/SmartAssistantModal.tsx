@@ -1,3 +1,4 @@
+import { JOURNEY_STEPS, useJourney } from '@/context/JourneyContext';
 import {
     Flight,
     formatTimeRemaining,
@@ -7,7 +8,7 @@ import {
     getCurrentTime,
 } from '@/data/airportDatabase';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     Animated,
     Dimensions,
@@ -22,60 +23,6 @@ import {
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-// Les étapes du parcours aéroport
-const JOURNEY_STEPS = [
-    {
-        id: 'checkin',
-        title: 'Enregistrement',
-        instruction: 'Rendez-vous aux comptoirs d\'enregistrement ou utilisez une borne auto-enregistrement.',
-        icon: 'desktop-classic',
-        action: 'Je suis enregistré',
-        tips: ['Préparez votre passeport', 'Imprimez ou téléchargez votre carte d\'embarquement'],
-    },
-    {
-        id: 'baggage',
-        title: 'Dépose Bagages',
-        instruction: 'Déposez vos bagages en soute au comptoir dédié.',
-        icon: 'bag-suitcase',
-        action: 'Bagages déposés',
-        tips: ['Max 23kg par bagage', 'Gardez vos objets de valeur en cabine'],
-    },
-    {
-        id: 'security',
-        title: 'Contrôle Sécurité',
-        instruction: 'Passez le contrôle de sécurité. Préparez vos liquides et appareils électroniques.',
-        icon: 'shield-check',
-        action: 'Sécurité passée',
-        tips: ['Liquides < 100ml dans sac transparent', 'Retirez ceinture, veste, montre'],
-        dynamic: true, // Indique qu'on veut afficher des infos temps réel
-    },
-    {
-        id: 'passport',
-        title: 'Contrôle Passeport',
-        instruction: 'Passez le contrôle des passeports pour accéder à la zone internationale.',
-        icon: 'passport',
-        action: 'Passeport vérifié',
-        tips: ['Passeport valide 6 mois après le voyage', 'Visa si nécessaire'],
-    },
-    {
-        id: 'gate',
-        title: 'Direction Porte',
-        instruction: 'Dirigez-vous vers votre porte d\'embarquement.',
-        icon: 'gate',
-        action: 'Arrivé à la porte',
-        tips: ['Vérifiez les écrans pour le numéro de porte', 'Comptez 10-15 min de marche'],
-        dynamic: true,
-    },
-    {
-        id: 'boarding',
-        title: 'Embarquement',
-        instruction: 'Présentez-vous à la porte. L\'embarquement va commencer !',
-        icon: 'airplane-takeoff',
-        action: 'Je suis à bord !',
-        tips: ['Carte d\'embarquement + passeport prêts', 'Désactivez le mode avion après le décollage'],
-    },
-];
-
 interface Props {
     visible: boolean;
     onClose: () => void;
@@ -85,10 +32,11 @@ interface Props {
 
 export default function SmartAssistantModal({ visible, onClose, flightNumber, loyaltyTier }: Props) {
     const [currentTime, setCurrentTime] = useState(getCurrentTime());
-    const [currentStepIndex, setCurrentStepIndex] = useState(0);
     const [myFlight, setMyFlight] = useState<Flight | null>(null);
     const [securityInfo, setSecurityInfo] = useState<any>(null);
-    const [completedSteps, setCompletedSteps] = useState<string[]>([]);
+
+    // Utiliser le contexte partagé du parcours
+    const { currentStepIndex, completedSteps, advanceStep, isStepCompleted, lastScanResult } = useJourney();
 
     const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
     const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -145,25 +93,23 @@ export default function SmartAssistantModal({ visible, onClose, flightNumber, lo
         Animated.timing(slideAnim, { toValue: SCREEN_HEIGHT, duration: 300, useNativeDriver: true }).start(() => onClose());
     };
 
-    const handleStepComplete = useCallback(() => {
+    const handleStepComplete = () => {
         Vibration.vibrate(100);
-        const currentStep = JOURNEY_STEPS[currentStepIndex];
-        setCompletedSteps(prev => [...prev, currentStep.id]);
-
-        if (currentStepIndex < JOURNEY_STEPS.length - 1) {
-            setCurrentStepIndex(prev => prev + 1);
-        }
-    }, [currentStepIndex]);
+        advanceStep();
+    };
 
     const currentStep = JOURNEY_STEPS[currentStepIndex];
     const isLastStep = currentStepIndex === JOURNEY_STEPS.length - 1;
     const allCompleted = completedSteps.length === JOURNEY_STEPS.length;
 
     const getStepColor = (index: number) => {
-        if (index < currentStepIndex) return '#10B981'; // Completed
-        if (index === currentStepIndex) return '#B22222'; // Current
-        return '#CBD5E1'; // Upcoming
+        if (index < currentStepIndex || isStepCompleted(JOURNEY_STEPS[index].id)) return '#10B981';
+        if (index === currentStepIndex) return '#B22222';
+        return '#CBD5E1';
     };
+
+    // Message si scan QR a validé une étape
+    const showScanSuccess = lastScanResult?.success && lastScanResult?.stepAdvanced;
 
     return (
         <Modal visible={visible} transparent animationType="fade" statusBarTranslucent>
@@ -218,6 +164,14 @@ export default function SmartAssistantModal({ visible, onClose, flightNumber, lo
                         )}
                     </View>
 
+                    {/* Scan Success Banner */}
+                    {showScanSuccess && (
+                        <View style={styles.scanSuccessBanner}>
+                            <MaterialCommunityIcons name="qrcode-scan" size={20} color="#166534" />
+                            <Text style={styles.scanSuccessText}>{lastScanResult.message}</Text>
+                        </View>
+                    )}
+
                     {/* Progress Bar */}
                     <View style={styles.progressSection}>
                         <View style={styles.progressBar}>
@@ -238,7 +192,7 @@ export default function SmartAssistantModal({ visible, onClose, flightNumber, lo
                         {JOURNEY_STEPS.map((step, index) => (
                             <View key={step.id} style={styles.timelineItem}>
                                 <View style={[styles.timelineDot, { backgroundColor: getStepColor(index) }]}>
-                                    {index < currentStepIndex && (
+                                    {(index < currentStepIndex || isStepCompleted(step.id)) && (
                                         <MaterialCommunityIcons name="check" size={12} color="#fff" />
                                     )}
                                 </View>
@@ -263,6 +217,16 @@ export default function SmartAssistantModal({ visible, onClose, flightNumber, lo
 
                                 <Text style={styles.stepTitle}>{currentStep.title}</Text>
                                 <Text style={styles.stepInstruction}>{currentStep.instruction}</Text>
+
+                                {/* QR Scan Hint */}
+                                {currentStep.qrType && (
+                                    <View style={styles.qrHint}>
+                                        <MaterialCommunityIcons name="qrcode-scan" size={20} color="#7C3AED" />
+                                        <Text style={styles.qrHintText}>
+                                            Scannez votre QR pour valider automatiquement
+                                        </Text>
+                                    </View>
+                                )}
 
                                 {/* Dynamic Info - Security Wait Time */}
                                 {currentStep.id === 'security' && securityInfo && (
@@ -364,6 +328,8 @@ const styles = StyleSheet.create({
     countdownBar: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(212,175,55,0.2)', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: 'rgba(212,175,55,0.4)' },
     countdownLabel: { fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.85)' },
     countdownValue: { fontSize: 18, fontWeight: '900', color: '#D4AF37', marginLeft: 'auto' },
+    scanSuccessBanner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: '#D1FAE5', padding: 12, borderBottomWidth: 1, borderBottomColor: '#A7F3D0' },
+    scanSuccessText: { fontSize: 14, fontWeight: '700', color: '#166534' },
     progressSection: { paddingHorizontal: 20, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#E8ECF0' },
     progressBar: { flex: 1, height: 8, backgroundColor: '#E8ECF0', borderRadius: 4, overflow: 'hidden' },
     progressFill: { height: '100%', backgroundColor: '#10B981', borderRadius: 4 },
@@ -377,6 +343,8 @@ const styles = StyleSheet.create({
     stepIconBox: { width: 90, height: 90, borderRadius: 28, backgroundColor: 'rgba(178, 34, 34, 0.1)', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
     stepTitle: { fontSize: 24, fontWeight: '900', color: '#1E293B', marginBottom: 8, textAlign: 'center' },
     stepInstruction: { fontSize: 15, fontWeight: '500', color: '#64748B', textAlign: 'center', lineHeight: 22, marginBottom: 16 },
+    qrHint: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F3E8FF', padding: 12, borderRadius: 12, marginBottom: 16, width: '100%' },
+    qrHintText: { fontSize: 13, fontWeight: '600', color: '#7C3AED', flex: 1 },
     dynamicInfo: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#EFF6FF', padding: 14, borderRadius: 14, marginBottom: 16, width: '100%' },
     dynamicText: { fontSize: 14, fontWeight: '600', color: '#1E293B' },
     dynamicHighlight: { fontWeight: '900', color: '#1565C0' },
