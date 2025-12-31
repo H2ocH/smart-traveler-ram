@@ -2,11 +2,10 @@ import {
     Flight,
     formatTimeRemaining,
     formatTimeWithSeconds,
-    generateFlights,
+    generateFlightForNumber,
     generateLounges,
     generateSecurityZones,
     getCurrentTime,
-    getPassengerContext,
     getWeatherConditions,
 } from '@/data/airportDatabase';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -22,7 +21,7 @@ import {
     View
 } from 'react-native';
 
-const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 type AlertType = 'CROWD' | 'SHOPPING' | 'GATE' | 'BOARDING' | 'DELAY' | 'PRIORITY' | 'FINAL_CALL' | 'WEATHER';
 
@@ -40,75 +39,71 @@ interface SmartAlert {
 const ALERT_CONFIG: Record<AlertType, {
     icon: keyof typeof MaterialCommunityIcons.glyphMap;
     color: string;
-    gradient: string[];
 }> = {
-    CROWD: { icon: 'account-group', color: '#D84315', gradient: ['#FF8A65', '#D84315'] },
-    SHOPPING: { icon: 'shopping', color: '#2E7D32', gradient: ['#81C784', '#2E7D32'] },
-    GATE: { icon: 'gate-arrow-right', color: '#1565C0', gradient: ['#64B5F6', '#1565C0'] },
-    BOARDING: { icon: 'airplane-takeoff', color: '#00695C', gradient: ['#4DB6AC', '#00695C'] },
-    DELAY: { icon: 'clock-alert-outline', color: '#E65100', gradient: ['#FFB74D', '#E65100'] },
-    PRIORITY: { icon: 'star-circle', color: '#6A1B9A', gradient: ['#BA68C8', '#6A1B9A'] },
-    FINAL_CALL: { icon: 'alert-circle', color: '#C62828', gradient: ['#EF5350', '#C62828'] },
-    WEATHER: { icon: 'weather-cloudy-alert', color: '#37474F', gradient: ['#78909C', '#37474F'] },
+    CROWD: { icon: 'account-group', color: '#D84315' },
+    SHOPPING: { icon: 'shopping', color: '#2E7D32' },
+    GATE: { icon: 'gate-arrow-right', color: '#1565C0' },
+    BOARDING: { icon: 'airplane-takeoff', color: '#00695C' },
+    DELAY: { icon: 'clock-alert-outline', color: '#E65100' },
+    PRIORITY: { icon: 'star-circle', color: '#6A1B9A' },
+    FINAL_CALL: { icon: 'alert-circle', color: '#C62828' },
+    WEATHER: { icon: 'weather-cloudy-alert', color: '#37474F' },
 };
 
-const analyzeAirportData = (
-    flights: Flight[],
+const analyzeFlightData = (
+    flight: Flight,
     securityZones: any[],
-    lounges: any[]
+    lounges: any[],
+    loyaltyTier: string
 ): SmartAlert[] => {
     const alerts: SmartAlert[] = [];
     const now = getCurrentTime();
-    const passenger = getPassengerContext();
 
-    const myFlight = flights.find(f => f.flightNumber === passenger.flightNumber);
-    if (!myFlight) return alerts;
+    const timeToBoarding = (flight.boardingTime.getTime() - now.getTime()) / 60000;
+    const timeToGateClose = (flight.gateCloseTime.getTime() - now.getTime()) / 60000;
 
-    const timeToBoarding = (myFlight.boardingTime.getTime() - now.getTime()) / 60000;
-    const timeToGateClose = (myFlight.gateCloseTime.getTime() - now.getTime()) / 60000;
-
-    if (myFlight.status === 'final-call' || (timeToGateClose <= 15 && timeToGateClose > 0)) {
+    if (flight.status === 'final-call' || (timeToGateClose <= 15 && timeToGateClose > 0)) {
         alerts.push({
             id: `final-${now.getTime()}`,
             type: 'FINAL_CALL',
-            title: `DERNIER APPEL - ${myFlight.flightNumber}`,
-            message: `Fermeture porte ${myFlight.newGate || myFlight.gate} dans ${formatTimeRemaining(myFlight.gateCloseTime)} ! Présentez-vous immédiatement.`,
-            impact: formatTimeRemaining(myFlight.gateCloseTime),
+            title: `DERNIER APPEL - ${flight.flightNumber}`,
+            message: `Fermeture porte ${flight.newGate || flight.gate} dans ${formatTimeRemaining(flight.gateCloseTime)} !`,
+            impact: formatTimeRemaining(flight.gateCloseTime),
             priority: 'critical',
             action: 'Courir !',
             timestamp: now,
         });
-    } else if (myFlight.status === 'boarding' || (timeToBoarding <= 5 && timeToBoarding > -30)) {
+    } else if (flight.status === 'boarding' || (timeToBoarding <= 5 && timeToBoarding > -30)) {
         alerts.push({
             id: `boarding-${now.getTime()}`,
             type: 'BOARDING',
-            title: `Embarquement - ${myFlight.flightNumber}`,
-            message: `Direction ${myFlight.destination}. Porte ${myFlight.newGate || myFlight.gate}.`,
-            impact: `Porte ${myFlight.newGate || myFlight.gate}`,
+            title: `Embarquement - ${flight.flightNumber}`,
+            message: `Direction ${flight.destination}. Porte ${flight.newGate || flight.gate}.`,
+            impact: `Porte ${flight.newGate || flight.gate}`,
             priority: 'high',
             action: 'Embarquer',
             timestamp: now,
         });
-    } else if (myFlight.status === 'gate-change' && myFlight.newGate) {
+    } else if (flight.status === 'gate-change' && flight.newGate) {
         alerts.push({
             id: `gate-${now.getTime()}`,
             type: 'GATE',
-            title: `Changement porte - ${myFlight.flightNumber}`,
-            message: `Nouvelle porte: ${myFlight.gate} → ${myFlight.newGate}. ~8 min de marche.`,
-            impact: `${myFlight.newGate}`,
+            title: `Changement porte - ${flight.flightNumber}`,
+            message: `Nouvelle porte: ${flight.gate} → ${flight.newGate}. ~8 min de marche.`,
+            impact: flight.newGate,
             priority: 'high',
             action: 'Itinéraire',
             timestamp: new Date(now.getTime() - 2 * 60000),
         });
     }
 
-    if (myFlight.status === 'delayed' && myFlight.delay) {
+    if (flight.status === 'delayed' && flight.delay) {
         alerts.push({
             id: `delay-${now.getTime()}`,
             type: 'DELAY',
-            title: `Retard ${myFlight.flightNumber}`,
-            message: `+${myFlight.delay} min. Profitez-en pour visiter nos lounges !`,
-            impact: `+${myFlight.delay}min`,
+            title: `Retard ${flight.flightNumber}`,
+            message: `+${flight.delay} min. Profitez-en pour visiter nos lounges !`,
+            impact: `+${flight.delay}min`,
             priority: 'medium',
             timestamp: new Date(now.getTime() - 5 * 60000),
         });
@@ -131,7 +126,7 @@ const analyzeAirportData = (
         });
     }
 
-    if (passenger.loyaltyTier === 'gold' || passenger.loyaltyTier === 'platinum') {
+    if (loyaltyTier === 'gold' || loyaltyTier === 'platinum') {
         const priorityZone = securityZones.find(z => z.name.includes('Prioritaire'));
         if (priorityZone) {
             alerts.push({
@@ -183,9 +178,11 @@ const analyzeAirportData = (
 interface Props {
     visible: boolean;
     onClose: () => void;
+    flightNumber: string;
+    loyaltyTier: string;
 }
 
-export default function SmartAssistantModal({ visible, onClose }: Props) {
+export default function SmartAssistantModal({ visible, onClose, flightNumber, loyaltyTier }: Props) {
     const [currentTime, setCurrentTime] = useState(getCurrentTime());
     const [isAnalyzing, setIsAnalyzing] = useState(true);
     const [alerts, setAlerts] = useState<SmartAlert[]>([]);
@@ -219,23 +216,25 @@ export default function SmartAssistantModal({ visible, onClose }: Props) {
     }, []);
 
     const runAnalysis = useCallback(() => {
+        if (!flightNumber) return;
+
         setIsAnalyzing(true);
         setAlerts([]);
         fadeAnims.forEach(anim => anim.setValue(0));
 
         setTimeout(() => {
-            const flights = generateFlights();
+            // Générer le vol basé sur le numéro de vol du passager
+            const flight = generateFlightForNumber(flightNumber);
             const securityZones = generateSecurityZones();
             const lounges = generateLounges();
-            const passenger = getPassengerContext();
 
-            setMyFlight(flights.find(f => f.flightNumber === passenger.flightNumber) || flights[0]);
+            setMyFlight(flight);
             const bestSec = [...securityZones].sort((a, b) => a.currentWaitTime - b.currentWaitTime)[0];
             setSecurityInfo({ best: bestSec.name, time: bestSec.currentWaitTime });
 
             setTimeout(() => {
                 setIsAnalyzing(false);
-                const generatedAlerts = analyzeAirportData(flights, securityZones, lounges);
+                const generatedAlerts = analyzeFlightData(flight, securityZones, lounges, loyaltyTier);
 
                 generatedAlerts.forEach((alert, index) => {
                     setTimeout(() => {
@@ -245,33 +244,32 @@ export default function SmartAssistantModal({ visible, onClose }: Props) {
                 });
             }, 1200);
         }, 500);
-    }, [fadeAnims]);
+    }, [fadeAnims, flightNumber, loyaltyTier]);
 
     useEffect(() => {
-        if (visible && !isAnalyzing) {
+        if (visible && !isAnalyzing && flightNumber) {
             const autoRefresh = setInterval(() => {
-                const flights = generateFlights();
+                const flight = generateFlightForNumber(flightNumber);
                 const securityZones = generateSecurityZones();
                 const lounges = generateLounges();
-                const passenger = getPassengerContext();
 
-                setMyFlight(flights.find(f => f.flightNumber === passenger.flightNumber) || flights[0]);
+                setMyFlight(flight);
                 const bestSec = [...securityZones].sort((a, b) => a.currentWaitTime - b.currentWaitTime)[0];
                 setSecurityInfo({ best: bestSec.name, time: bestSec.currentWaitTime });
-                setAlerts(analyzeAirportData(flights, securityZones, lounges));
+                setAlerts(analyzeFlightData(flight, securityZones, lounges, loyaltyTier));
             }, 30000);
             return () => clearInterval(autoRefresh);
         }
-    }, [visible, isAnalyzing]);
+    }, [visible, isAnalyzing, flightNumber, loyaltyTier]);
 
     useEffect(() => {
-        if (visible) {
+        if (visible && flightNumber) {
             Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, tension: 65, friction: 10 }).start();
             runAnalysis();
         } else {
             slideAnim.setValue(SCREEN_HEIGHT);
         }
-    }, [visible]);
+    }, [visible, flightNumber]);
 
     const handleClose = () => {
         Animated.timing(slideAnim, { toValue: SCREEN_HEIGHT, duration: 300, useNativeDriver: true }).start(() => onClose());
@@ -336,7 +334,7 @@ export default function SmartAssistantModal({ visible, onClose }: Props) {
             <View style={styles.overlay}>
                 <Animated.View style={[styles.modalContainer, { transform: [{ translateY: slideAnim }] }]}>
 
-                    {/* Premium Header */}
+                    {/* Header */}
                     <View style={styles.header}>
                         <View style={styles.headerPattern}>
                             {[...Array(4)].map((_, i) => (
@@ -384,15 +382,12 @@ export default function SmartAssistantModal({ visible, onClose }: Props) {
                             )}
                         </View>
 
-                        {/* Countdown Bar */}
+                        {/* Countdown */}
                         {myFlight && (
                             <View style={styles.countdownBar}>
                                 <MaterialCommunityIcons name="timer-sand" size={18} color="#D4AF37" />
                                 <Text style={styles.countdownLabel}>Embarquement</Text>
                                 <Text style={styles.countdownValue}>{formatTimeRemaining(myFlight.boardingTime)}</Text>
-                                <View style={styles.countdownProgress}>
-                                    <Animated.View style={[styles.countdownFill, { transform: [{ scaleX: pulseAnim }] }]} />
-                                </View>
                             </View>
                         )}
                     </View>
@@ -420,7 +415,7 @@ export default function SmartAssistantModal({ visible, onClose }: Props) {
                                 </View>
                             </Animated.View>
                             <Text style={styles.loadingTitle}>Analyse IA</Text>
-                            <Text style={styles.loadingDesc}>Scan sécurité • Lounges • Vols</Text>
+                            <Text style={styles.loadingDesc}>Scan pour {flightNumber}</Text>
                         </View>
                     ) : (
                         <FlatList
@@ -435,13 +430,13 @@ export default function SmartAssistantModal({ visible, onClose }: Props) {
                                         <MaterialCommunityIcons name="check-decagram" size={48} color="#10B981" />
                                     </View>
                                     <Text style={styles.emptyTitle}>Parfait !</Text>
-                                    <Text style={styles.emptyDesc}>Aucune alerte, bon voyage</Text>
+                                    <Text style={styles.emptyDesc}>Aucune alerte pour {flightNumber}</Text>
                                 </View>
                             }
                         />
                     )}
 
-                    {/* Footer Buttons */}
+                    {/* Footer */}
                     {!isAnalyzing && (
                         <View style={styles.footer}>
                             <TouchableOpacity style={styles.refreshBtn} onPress={runAnalysis} activeOpacity={0.85}>
@@ -475,7 +470,7 @@ const styles = StyleSheet.create({
     aiBadge: { backgroundColor: 'rgba(255,255,255,0.25)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
     aiBadgeText: { fontSize: 10, fontWeight: '800', color: '#fff', letterSpacing: 0.5 },
     headerSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.8)', fontWeight: '500', marginTop: 2 },
-    closeBtn: { width: 42, height: 42, borderRadius: 14, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 6, elevation: 3 },
+    closeBtn: { width: 42, height: 42, borderRadius: 14, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
     infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
     timeBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12 },
     timeDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#4ADE80' },
@@ -486,8 +481,6 @@ const styles = StyleSheet.create({
     countdownBar: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(212,175,55,0.2)', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: 'rgba(212,175,55,0.4)' },
     countdownLabel: { fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.85)' },
     countdownValue: { fontSize: 18, fontWeight: '900', color: '#D4AF37', marginLeft: 'auto' },
-    countdownProgress: { width: 40, height: 6, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 3, overflow: 'hidden' },
-    countdownFill: { width: '60%', height: '100%', backgroundColor: '#D4AF37', borderRadius: 3 },
     statusBar: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 14, paddingHorizontal: 20, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#E8ECF0' },
     statusDot: { width: 10, height: 10, borderRadius: 5 },
     statusText: { flex: 1, fontSize: 14, fontWeight: '600', color: '#64748B' },
@@ -499,7 +492,7 @@ const styles = StyleSheet.create({
     loadingTitle: { fontSize: 20, fontWeight: '800', color: '#1E293B' },
     loadingDesc: { fontSize: 14, fontWeight: '500', color: '#94A3B8', marginTop: 6 },
     listContent: { padding: 16 },
-    alertCard: { backgroundColor: '#fff', borderRadius: 20, padding: 16, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 14, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
+    alertCard: { backgroundColor: '#fff', borderRadius: 20, padding: 16, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 14, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 12, elevation: 3 },
     alertCardCritical: { backgroundColor: '#FEF2F2', borderWidth: 2, borderColor: '#FECACA' },
     alertIconBox: { width: 52, height: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
     alertContent: { flex: 1 },
@@ -520,6 +513,6 @@ const styles = StyleSheet.create({
     footer: { flexDirection: 'row', gap: 12, padding: 20, paddingBottom: 32, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#E8ECF0' },
     refreshBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16, borderRadius: 16, borderWidth: 2, borderColor: '#B22222', backgroundColor: '#fff' },
     refreshText: { fontSize: 15, fontWeight: '700', color: '#B22222' },
-    continueBtn: { flex: 1.3, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16, borderRadius: 16, backgroundColor: '#B22222', shadowColor: '#B22222', shadowOpacity: 0.3, shadowRadius: 10, shadowOffset: { width: 0, height: 6 }, elevation: 6 },
+    continueBtn: { flex: 1.3, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16, borderRadius: 16, backgroundColor: '#B22222' },
     continueText: { fontSize: 15, fontWeight: '700', color: '#fff' },
 });

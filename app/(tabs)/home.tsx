@@ -25,16 +25,71 @@ import {
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-// Liste des vols disponibles (simulation)
+// Liste des vols RAM disponibles (simulation réaliste)
 const AVAILABLE_FLIGHTS = [
+  // Europe
   { number: 'AT205', destination: 'Paris CDG', code: 'CDG' },
-  { number: 'AT302', destination: 'Londres', code: 'LHR' },
-  { number: 'AT410', destination: 'New York', code: 'JFK' },
-  { number: 'AT125', destination: 'Dubai', code: 'DXB' },
-  { number: 'AT508', destination: 'Istanbul', code: 'IST' },
-  { number: 'AT601', destination: 'Madrid', code: 'MAD' },
+  { number: 'AT207', destination: 'Paris Orly', code: 'ORY' },
+  { number: 'AT302', destination: 'Londres Heathrow', code: 'LHR' },
+  { number: 'AT304', destination: 'Londres Gatwick', code: 'LGW' },
+  { number: 'AT601', destination: 'Madrid Barajas', code: 'MAD' },
+  { number: 'AT603', destination: 'Barcelone', code: 'BCN' },
   { number: 'AT715', destination: 'Amsterdam', code: 'AMS' },
-  { number: 'AT820', destination: 'Rome', code: 'FCO' },
+  { number: 'AT820', destination: 'Rome Fiumicino', code: 'FCO' },
+  { number: 'AT822', destination: 'Milan Malpensa', code: 'MXP' },
+  { number: 'AT450', destination: 'Bruxelles', code: 'BRU' },
+  { number: 'AT452', destination: 'Genève', code: 'GVA' },
+  { number: 'AT454', destination: 'Zurich', code: 'ZRH' },
+  { number: 'AT460', destination: 'Frankfurt', code: 'FRA' },
+  { number: 'AT462', destination: 'Munich', code: 'MUC' },
+  { number: 'AT470', destination: 'Lisbonne', code: 'LIS' },
+  { number: 'AT472', destination: 'Porto', code: 'OPO' },
+  { number: 'AT480', destination: 'Vienne', code: 'VIE' },
+  { number: 'AT482', destination: 'Prague', code: 'PRG' },
+  { number: 'AT490', destination: 'Copenhague', code: 'CPH' },
+  { number: 'AT492', destination: 'Stockholm', code: 'ARN' },
+  // Moyen-Orient
+  { number: 'AT125', destination: 'Dubai', code: 'DXB' },
+  { number: 'AT127', destination: 'Abu Dhabi', code: 'AUH' },
+  { number: 'AT508', destination: 'Istanbul', code: 'IST' },
+  { number: 'AT510', destination: 'Doha', code: 'DOH' },
+  { number: 'AT512', destination: 'Riyad', code: 'RUH' },
+  { number: 'AT514', destination: 'Jeddah', code: 'JED' },
+  { number: 'AT516', destination: 'Le Caire', code: 'CAI' },
+  { number: 'AT518', destination: 'Beyrouth', code: 'BEY' },
+  // Amérique
+  { number: 'AT410', destination: 'New York JFK', code: 'JFK' },
+  { number: 'AT412', destination: 'Washington', code: 'IAD' },
+  { number: 'AT414', destination: 'Montréal', code: 'YUL' },
+  { number: 'AT416', destination: 'Miami', code: 'MIA' },
+  { number: 'AT418', destination: 'Boston', code: 'BOS' },
+  { number: 'AT420', destination: 'São Paulo', code: 'GRU' },
+  // Afrique
+  { number: 'AT700', destination: 'Dakar', code: 'DSS' },
+  { number: 'AT702', destination: 'Abidjan', code: 'ABJ' },
+  { number: 'AT704', destination: 'Lagos', code: 'LOS' },
+  { number: 'AT706', destination: 'Accra', code: 'ACC' },
+  { number: 'AT708', destination: 'Tunis', code: 'TUN' },
+  { number: 'AT710', destination: 'Alger', code: 'ALG' },
+  { number: 'AT712', destination: 'Johannesburg', code: 'JNB' },
+  { number: 'AT714', destination: 'Nairobi', code: 'NBO' },
+  // Maroc intérieur
+  { number: 'AT100', destination: 'Marrakech', code: 'RAK' },
+  { number: 'AT102', destination: 'Agadir', code: 'AGA' },
+  { number: 'AT104', destination: 'Fès', code: 'FEZ' },
+  { number: 'AT106', destination: 'Tanger', code: 'TNG' },
+  { number: 'AT108', destination: 'Oujda', code: 'OUD' },
+  { number: 'AT110', destination: 'Laâyoune', code: 'EUN' },
+  { number: 'AT112', destination: 'Dakhla', code: 'VIL' },
+  { number: 'AT114', destination: 'Ouarzazate', code: 'OZZ' },
+  { number: 'AT116', destination: 'Nador', code: 'NDR' },
+  // Asie
+  { number: 'AT800', destination: 'Pékin', code: 'PEK' },
+  { number: 'AT802', destination: 'Shanghai', code: 'PVG' },
+  { number: 'AT804', destination: 'Tokyo', code: 'NRT' },
+  { number: 'AT806', destination: 'Singapour', code: 'SIN' },
+  { number: 'AT808', destination: 'Bangkok', code: 'BKK' },
+  { number: 'AT810', destination: 'Mumbai', code: 'BOM' },
 ];
 
 export default function HomeScreen() {
@@ -263,6 +318,8 @@ export default function HomeScreen() {
       <SmartAssistantModal
         visible={showSmartAssistant}
         onClose={() => setShowSmartAssistant(false)}
+        flightNumber={passenger.flightNumber}
+        loyaltyTier={passenger.loyaltyTier}
       />
 
       {/* Header */}
