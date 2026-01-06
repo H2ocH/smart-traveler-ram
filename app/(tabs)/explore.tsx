@@ -3,7 +3,7 @@ import { formatTimeWithSeconds, getCurrentTime, getWeatherConditions } from '@/d
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Image, Linking, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SHOPS_DATA } from './shop';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -11,6 +11,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 export default function ExploreScreen() {
   const [currentTime, setCurrentTime] = useState(getCurrentTime());
   const [weather, setWeather] = useState<any>(null);
+  const [showAssistanceModal, setShowAssistanceModal] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -31,6 +32,18 @@ export default function ExploreScreen() {
       case 'fog': return 'weather-fog';
       default: return 'weather-cloudy';
     }
+  };
+
+  const handleCall = (number: string) => {
+    Linking.openURL(`tel:${number}`);
+  };
+
+  const handleEmail = () => {
+    Linking.openURL('mailto:assistance@royalairmaroc.com?subject=Demande d\'assistance');
+  };
+
+  const handleWhatsApp = () => {
+    Linking.openURL('https://wa.me/212522529000');
   };
 
   return (
@@ -168,14 +181,6 @@ export default function ExploreScreen() {
               <Text style={styles.serviceDesc}>Historique</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.serviceCard} activeOpacity={0.85}>
-              <View style={[styles.serviceIcon, { backgroundColor: 'rgba(46, 125, 50, 0.1)' }]}>
-                <MaterialCommunityIcons name="help-circle" size={28} color="#2E7D32" />
-              </View>
-              <Text style={styles.serviceName}>Assistance</Text>
-              <Text style={styles.serviceDesc}>Support 24/7</Text>
-            </TouchableOpacity>
-
             <TouchableOpacity style={styles.serviceCard} activeOpacity={0.85} onPress={() => router.push('/(tabs)/loyalty')}>
               <View style={[styles.serviceIcon, { backgroundColor: 'rgba(106, 27, 154, 0.1)' }]}>
                 <MaterialCommunityIcons name="star-circle" size={28} color="#6A1B9A" />
@@ -184,20 +189,20 @@ export default function ExploreScreen() {
               <Text style={styles.serviceDesc}>Safar Flyer</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.serviceCard} activeOpacity={0.85}>
-              <View style={[styles.serviceIcon, { backgroundColor: 'rgba(21, 101, 192, 0.1)' }]}>
-                <MaterialCommunityIcons name="map-marker" size={28} color="#1565C0" />
-              </View>
-              <Text style={styles.serviceName}>Plan</Text>
-              <Text style={styles.serviceDesc}>Aéroport</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.serviceCard} activeOpacity={0.85}>
-              <View style={[styles.serviceIcon, { backgroundColor: 'rgba(178, 34, 34, 0.1)' }]}>
-                <MaterialCommunityIcons name="phone" size={28} color="#B22222" />
+            <TouchableOpacity style={styles.serviceCard} activeOpacity={0.85} onPress={() => handleCall('+212522529000')}>
+              <View style={[styles.serviceIcon, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
+                <MaterialCommunityIcons name="alert-circle" size={28} color="#EF4444" />
               </View>
               <Text style={styles.serviceName}>Urgence</Text>
-              <Text style={styles.serviceDesc}>Contact</Text>
+              <Text style={styles.serviceDesc}>Appel direct</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.serviceCard} activeOpacity={0.85} onPress={() => setShowAssistanceModal(true)}>
+              <View style={[styles.serviceIcon, { backgroundColor: 'rgba(46, 125, 50, 0.1)' }]}>
+                <MaterialCommunityIcons name="headset" size={28} color="#2E7D32" />
+              </View>
+              <Text style={styles.serviceName}>Assistance</Text>
+              <Text style={styles.serviceDesc}>Support 24/7</Text>
             </TouchableOpacity>
           </View>
 
@@ -225,6 +230,99 @@ export default function ExploreScreen() {
           </View>
 
         </ScrollView>
+
+        {/* Modal Assistance */}
+        <Modal
+          visible={showAssistanceModal}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowAssistanceModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.assistanceModal}>
+              <View style={styles.assistanceHeader}>
+                <View style={styles.assistanceHeaderIcon}>
+                  <MaterialCommunityIcons name="headset" size={32} color="#2E7D32" />
+                </View>
+                <Text style={styles.assistanceTitle}>Assistance 24/7</Text>
+                <TouchableOpacity onPress={() => setShowAssistanceModal(false)} style={styles.closeBtn}>
+                  <MaterialCommunityIcons name="close" size={24} color="#64748B" />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.assistanceSubtitle}>
+                Notre équipe est disponible pour vous aider à tout moment
+              </Text>
+
+              {/* Contact Options */}
+              <View style={styles.contactOptions}>
+                <TouchableOpacity style={styles.contactOptionItem} onPress={() => handleCall('+212522529000')}>
+                  <View style={[styles.contactOptionIcon, { backgroundColor: 'rgba(178, 34, 34, 0.1)' }]}>
+                    <MaterialCommunityIcons name="phone" size={24} color="#B22222" />
+                  </View>
+                  <View style={styles.contactOptionInfo}>
+                    <Text style={styles.contactOptionTitle}>Appeler</Text>
+                    <Text style={styles.contactOptionDesc}>+212 522 529 000</Text>
+                  </View>
+                  <MaterialCommunityIcons name="chevron-right" size={24} color="#CBD5E1" />
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.contactOptionItem} onPress={handleWhatsApp}>
+                  <View style={[styles.contactOptionIcon, { backgroundColor: 'rgba(37, 211, 102, 0.1)' }]}>
+                    <MaterialCommunityIcons name="whatsapp" size={24} color="#25D366" />
+                  </View>
+                  <View style={styles.contactOptionInfo}>
+                    <Text style={styles.contactOptionTitle}>WhatsApp</Text>
+                    <Text style={styles.contactOptionDesc}>Chat en direct</Text>
+                  </View>
+                  <MaterialCommunityIcons name="chevron-right" size={24} color="#CBD5E1" />
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.contactOptionItem} onPress={handleEmail}>
+                  <View style={[styles.contactOptionIcon, { backgroundColor: 'rgba(21, 101, 192, 0.1)' }]}>
+                    <MaterialCommunityIcons name="email" size={24} color="#1565C0" />
+                  </View>
+                  <View style={styles.contactOptionInfo}>
+                    <Text style={styles.contactOptionTitle}>Email</Text>
+                    <Text style={styles.contactOptionDesc}>assistance@royalairmaroc.com</Text>
+                  </View>
+                  <MaterialCommunityIcons name="chevron-right" size={24} color="#CBD5E1" />
+                </TouchableOpacity>
+              </View>
+
+              {/* FAQ Section */}
+              <View style={styles.faqSection}>
+                <Text style={styles.faqTitle}>Questions fréquentes</Text>
+                
+                <View style={styles.faqItem}>
+                  <MaterialCommunityIcons name="help-circle-outline" size={18} color="#64748B" />
+                  <Text style={styles.faqText}>Comment modifier ma réservation ?</Text>
+                </View>
+                
+                <View style={styles.faqItem}>
+                  <MaterialCommunityIcons name="help-circle-outline" size={18} color="#64748B" />
+                  <Text style={styles.faqText}>Où récupérer mes bagages ?</Text>
+                </View>
+                
+                <View style={styles.faqItem}>
+                  <MaterialCommunityIcons name="help-circle-outline" size={18} color="#64748B" />
+                  <Text style={styles.faqText}>Comment enregistrer en ligne ?</Text>
+                </View>
+                
+                <View style={styles.faqItem}>
+                  <MaterialCommunityIcons name="help-circle-outline" size={18} color="#64748B" />
+                  <Text style={styles.faqText}>Quels sont les horaires des vols ?</Text>
+                </View>
+              </View>
+
+              {/* Horaires */}
+              <View style={styles.horairesBadge}>
+                <MaterialCommunityIcons name="clock-outline" size={16} color="#10B981" />
+                <Text style={styles.horairesBadgeText}>Service disponible 24h/24, 7j/7</Text>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </View>
     </RequireAuth>
   );
@@ -691,5 +789,123 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#CBD5E1',
     marginTop: 4,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  assistanceModal: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 24,
+    paddingBottom: 40,
+  },
+  assistanceHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  assistanceHeaderIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: 'rgba(46, 125, 50, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  assistanceTitle: {
+    flex: 1,
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#1E293B',
+  },
+  closeBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  assistanceSubtitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#64748B',
+    marginBottom: 20,
+  },
+  contactOptions: {
+    gap: 12,
+    marginBottom: 20,
+  },
+  contactOptionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    padding: 16,
+    gap: 14,
+  },
+  contactOptionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  contactOptionInfo: {
+    flex: 1,
+  },
+  contactOptionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  contactOptionDesc: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#64748B',
+    marginTop: 2,
+  },
+  faqSection: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+  },
+  faqTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 12,
+  },
+  faqItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  faqText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#64748B',
+  },
+  horairesBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    borderRadius: 12,
+    paddingVertical: 12,
+  },
+  horairesBadgeText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#10B981',
   },
 });

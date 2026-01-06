@@ -107,7 +107,6 @@ function WeightEstimatorScreenContent() {
   const [aiDescription, setAiDescription] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResult, setAiResult] = useState<{ name: string; grams: number; confidence: string } | null>(null);
-  const [aiPhoto, setAiPhoto] = useState<string | null>(null);
   const [customItems, setCustomItems] = useState<{ id: string; label: string; grams: number }[]>([]);
 
   const grouped = useMemo(() => {
@@ -153,46 +152,10 @@ function WeightEstimatorScreenContent() {
 
   const itemCount = Object.values(qty).reduce((a, b) => a + b, 0);
 
-  // Prendre une photo
-  const takePhoto = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission refusée', 'Accès à la caméra requis.');
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.7,
-      base64: true,
-    });
-    if (!result.canceled && result.assets[0].base64) {
-      setAiPhoto(result.assets[0].base64);
-      setAiResult(null);
-    }
-  };
-
-  // Choisir une image de la galerie
-  const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission refusée', 'Accès à la galerie requis.');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.7,
-      base64: true,
-    });
-    if (!result.canceled && result.assets[0].base64) {
-      setAiPhoto(result.assets[0].base64);
-      setAiResult(null);
-    }
-  };
-
-  // Fonction d'estimation via API Groq (avec support vision)
+  // Fonction d'estimation via API Groq (texte uniquement)
   const estimateWithAI = async () => {
-    if (!aiDescription.trim() && !aiPhoto) {
-      Alert.alert('Erreur', 'Veuillez entrer une description ou prendre une photo de l\'objet.');
+    if (!aiDescription.trim()) {
+      Alert.alert('Erreur', 'Veuillez entrer une description de l\'objet.');
       return;
     }
     
@@ -202,127 +165,64 @@ function WeightEstimatorScreenContent() {
     try {
       const GROQ_API_KEY = process.env.EXPO_PUBLIC_GROQ_API_KEY;
       
-      // Si on a une photo, utiliser le modèle vision
-      if (aiPhoto) {
-        const visionPrompt = aiDescription.trim() 
-          ? `Analyse cette image et estime le poids de l'objet. Contexte supplémentaire: ${aiDescription}`
-          : `Analyse cette image et identifie l'objet principal. Estime son poids en grammes.`;
-        
-        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${GROQ_API_KEY}`,
-          },
-          body: JSON.stringify({
-            model: 'llama-4-scout-17b-16e-instruct',
-            messages: [
-              {
-                role: 'user',
-                content: [
-                  {
-                    type: 'text',
-                    text: `${visionPrompt}\n\nRéponds UNIQUEMENT avec un JSON valide dans ce format exact, sans aucun texte avant ou après:\n{"name": "nom de l'objet identifié", "grams": nombre_en_grammes, "confidence": "Élevée" ou "Moyenne" ou "Faible"}\n\nExemple: {"name": "Sac à main", "grams": 600, "confidence": "Élevée"}`
-                  },
-                  {
-                    type: 'image_url',
-                    image_url: {
-                      url: `data:image/jpeg;base64,${aiPhoto}`
-                    }
-                  }
-                ]
-              }
-            ],
-            temperature: 0.3,
-            max_tokens: 256,
-          }),
-        });
-        
-        const data = await response.json();
-        
-        if (!response.ok) {
-          console.error('Vision API Error:', data);
-          throw new Error(data.error?.message || 'Erreur API Vision');
-        }
-        
-        const aiResponse = data.choices?.[0]?.message?.content || '';
-        const jsonMatch = aiResponse.match(/\{[^}]+\}/);
-        
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          setAiResult({
-            name: parsed.name || 'Objet détecté',
-            grams: parseInt(parsed.grams) || 300,
-            confidence: parsed.confidence || 'Moyenne',
-          });
-        } else {
-          setAiResult({
-            name: 'Objet détecté',
-            grams: 300,
-            confidence: 'Faible',
-          });
-        }
-      } else {
-        // Mode texte uniquement
-        const prompt = `Tu es un expert en estimation de poids d'objets. Estime le poids de l'objet suivant en grammes.\n\nDescription de l'objet: ${aiDescription}\n\nRéponds UNIQUEMENT avec un JSON valide dans ce format exact, sans aucun texte avant ou après:\n{"name": "nom de l'objet", "grams": nombre_en_grammes, "confidence": "Élevée" ou "Moyenne" ou "Faible"}\n\nExemple: {"name": "Sac à main", "grams": 600, "confidence": "Élevée"}`;
-        
-        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${GROQ_API_KEY}`,
-          },
-          body: JSON.stringify({
-            model: 'llama-3.3-70b-versatile',
-            messages: [
-              {
-                role: 'system',
-                content: 'Tu es un assistant expert en estimation de poids d\'objets du quotidien. Tu donnes des estimations précises basées sur ta connaissance des objets courants. Réponds uniquement en JSON.'
-              },
-              {
-                role: 'user',
-                content: prompt
-              }
-            ],
-            temperature: 0.3,
-            max_tokens: 256,
-          }),
-        });
-        
-        const data = await response.json();
-        
-        if (!response.ok) {
-          console.error('API Error:', data);
-          throw new Error(data.error?.message || 'Erreur API');
-        }
-        
-        const aiResponse = data.choices?.[0]?.message?.content || '';
-        
-        // Parser la réponse JSON
-        const jsonMatch = aiResponse.match(/\{[^}]+\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          setAiResult({
-            name: parsed.name || aiDescription || 'Objet',
-            grams: parseInt(parsed.grams) || 300,
-            confidence: parsed.confidence || 'Moyenne',
-          });
-        } else {
-          // Fallback sur la base locale
-          const searchText = aiDescription.toLowerCase();
-          let bestMatch = { name: aiDescription || 'Objet', grams: 300, confidence: 'Moyenne' };
-          for (const [keyword, dbData] of Object.entries(AI_WEIGHT_DATABASE)) {
-            if (searchText.includes(keyword)) {
-              bestMatch = {
-                name: keyword.charAt(0).toUpperCase() + keyword.slice(1),
-                grams: dbData.avgGrams,
-                confidence: 'Moyenne',
-              };
-              break;
+      const prompt = `Tu es un expert en estimation de poids d'objets. Estime le poids de l'objet suivant en grammes.\n\nDescription de l'objet: ${aiDescription}\n\nRéponds UNIQUEMENT avec un JSON valide dans ce format exact, sans aucun texte avant ou après:\n{"name": "nom de l'objet", "grams": nombre_en_grammes, "confidence": "Élevée" ou "Moyenne" ou "Faible"}\n\nExemple: {"name": "Sac à main", "grams": 600, "confidence": "Élevée"}`;
+      
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${GROQ_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: [
+            {
+              role: 'system',
+              content: 'Tu es un assistant expert en estimation de poids d\'objets du quotidien. Tu donnes des estimations précises basées sur ta connaissance des objets courants. Réponds uniquement en JSON.'
+            },
+            {
+              role: 'user',
+              content: prompt
             }
+          ],
+          temperature: 0.3,
+          max_tokens: 256,
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        console.error('API Error:', data);
+        throw new Error(data.error?.message || 'Erreur API');
+      }
+      
+      const aiResponse = data.choices?.[0]?.message?.content || '';
+      
+      // Parser la réponse JSON
+      const jsonMatch = aiResponse.match(/\{[^}]+\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        setAiResult({
+          name: parsed.name || aiDescription || 'Objet',
+          grams: parseInt(parsed.grams) || 300,
+          confidence: parsed.confidence || 'Moyenne',
+        });
+      } else {
+        // Fallback sur la base locale
+        const searchText = aiDescription.toLowerCase();
+        let bestMatch = { name: aiDescription || 'Objet', grams: 300, confidence: 'Moyenne' };
+        for (const [keyword, dbData] of Object.entries(AI_WEIGHT_DATABASE)) {
+          if (searchText.includes(keyword)) {
+            bestMatch = {
+              name: keyword.charAt(0).toUpperCase() + keyword.slice(1),
+              grams: dbData.avgGrams,
+              confidence: 'Moyenne',
+            };
+            break;
           }
-          setAiResult(bestMatch);
         }
+        setAiResult(bestMatch);
       }
     } catch (error) {
       console.error('Erreur Groq:', error);
@@ -363,7 +263,6 @@ function WeightEstimatorScreenContent() {
   const resetAIModal = () => {
     setShowAIModal(false);
     setAiDescription('');
-    setAiPhoto(null);
     setAiResult(null);
     setAiLoading(false);
   };
@@ -581,39 +480,11 @@ function WeightEstimatorScreenContent() {
                 </View>
 
                 <Text style={styles.modalSubtitle}>
-                  Prenez une photo ou décrivez l'objet pour estimer son poids
+                  Décrivez l'objet pour estimer son poids
                 </Text>
 
-                {/* Boutons photo */}
-                <View style={styles.photoButtons}>
-                  <TouchableOpacity style={styles.photoBtn} onPress={takePhoto} activeOpacity={0.8}>
-                    <MaterialCommunityIcons name="camera" size={24} color="#8B5CF6" />
-                    <Text style={styles.photoBtnText}>Prendre photo</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.photoBtn} onPress={pickImage} activeOpacity={0.8}>
-                    <MaterialCommunityIcons name="image" size={24} color="#8B5CF6" />
-                    <Text style={styles.photoBtnText}>Galerie</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* Aperçu de la photo */}
-                {aiPhoto && (
-                  <View style={styles.photoPreviewContainer}>
-                    <Image 
-                      source={{ uri: `data:image/jpeg;base64,${aiPhoto}` }} 
-                      style={styles.photoPreview} 
-                    />
-                    <TouchableOpacity 
-                      style={styles.removePhotoBtn} 
-                      onPress={() => { setAiPhoto(null); setAiResult(null); }}
-                    >
-                      <MaterialCommunityIcons name="close-circle" size={28} color="#EF4444" />
-                    </TouchableOpacity>
-                  </View>
-                )}
-
                 {/* Zone description */}
-                <Text style={styles.inputLabel}>Description (optionnel si photo)</Text>
+                <Text style={styles.inputLabel}>Description de l'objet</Text>
                 <TextInput
                   style={styles.aiInput}
                   placeholder="Ex: sac à main en cuir, peluche géante, valise cabine..."
@@ -653,7 +524,7 @@ function WeightEstimatorScreenContent() {
                       ) : (
                         <>
                           <MaterialCommunityIcons name="auto-fix" size={20} color="#fff" />
-                          <Text style={styles.aiActionBtnText}>{aiPhoto ? 'Analyser l\'image' : 'Estimer le poids'}</Text>
+                          <Text style={styles.aiActionBtnText}>Estimer le poids</Text>
                         </>
                       )}
                     </TouchableOpacity>

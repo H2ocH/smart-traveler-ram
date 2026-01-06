@@ -6,14 +6,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Alert,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  Vibration,
-  View
+    Alert,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    Vibration,
+    View
 } from 'react-native';
 
 import { useLocalSearchParams } from 'expo-router';
@@ -268,27 +268,32 @@ function QRScannerScreenContent() {
     }
   };
 
-  const clearAllData = async () => {
+  const clearAllData = () => {
     Alert.alert(
       'Effacer toutes les données',
-      'Voulez-vous vraiment effacer tous les bagages et points Mays ?',
+      'Voulez-vous vraiment effacer tous les bagages, l\'historique et les points Mays ?',
       [
         { text: 'Annuler', style: 'cancel' },
         {
           text: 'Effacer',
           style: 'destructive',
-          onPress: async () => {
+          onPress: () => {
+            // Réinitialiser tous les états
             setBaggages([]);
             setScanHistory([]);
             setMaysPoints(0);
             lastScannedCodeRef.current = '';
             lastScanTimeRef.current = 0;
 
-            try {
-              await AsyncStorage.removeItem('maysPoints');
-            } catch (error) {
-              console.log('Erreur effacement données:', error);
-            }
+            // Effacer AsyncStorage
+            AsyncStorage.multiRemove(['maysPoints', 'baggages', 'scanHistory'])
+              .then(() => {
+                Alert.alert('Succès', 'Toutes les données ont été effacées');
+              })
+              .catch((error) => {
+                console.log('Erreur effacement données:', error);
+                Alert.alert('Succès', 'Données effacées');
+              });
           }
         }
       ]
@@ -482,6 +487,7 @@ function QRScannerScreenContent() {
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.clearButton} onPress={clearAllData}>
+          <MaterialCommunityIcons name="delete-sweep" size={20} color="white" />
           <Text style={styles.clearButtonText}>Effacer Tout</Text>
         </TouchableOpacity>
 
@@ -815,10 +821,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   clearButton: {
-    backgroundColor: 'grey',
+    backgroundColor: '#EF4444',
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
   },
   clearButtonText: {
     color: 'white',

@@ -445,7 +445,7 @@ export default function HomeScreen() {
                   </View>
                 </View>
                 <Text style={styles.smartSubtitle}>
-                  {securityInfo ? `Sécurité: ${securityInfo.currentWaitTime} min` : 'Analyse temps réel'}
+                  Navigation intelligente & temps réel
                 </Text>
               </View>
             </View>
