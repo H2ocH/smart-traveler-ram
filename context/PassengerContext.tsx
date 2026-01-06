@@ -1,6 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
+interface RewardPurchase {
+    id: string;
+    name: string;
+    miles: number;
+    category: string;
+    date: string;
+    type: 'reward' | 'transfer';
+}
+
 interface PassengerData {
     flightNumber: string;
     passengerName: string;
@@ -10,6 +19,10 @@ interface PassengerData {
     loyaltyTier: 'standard' | 'silver' | 'gold' | 'platinum';
     hasCheckedBag: boolean;
     isLoggedIn: boolean;
+    // Données de fidélité
+    totalMilesEarned: number;
+    milesUsed: number;
+    rewardsHistory: RewardPurchase[];
 }
 
 interface PassengerContextType {
@@ -26,6 +39,9 @@ const defaultPassenger: PassengerData = {
     loyaltyTier: 'standard',
     hasCheckedBag: false,
     isLoggedIn: false,
+    totalMilesEarned: 0,
+    milesUsed: 0,
+    rewardsHistory: [],
 };
 
 const STORAGE_KEY = 'passengerSession';

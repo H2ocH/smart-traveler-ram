@@ -72,7 +72,7 @@ export default function ClaimsScreen() {
     <RequireAuth>
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.headerButton} onPress={() => router.back()} activeOpacity={0.85}>
+          <TouchableOpacity style={styles.headerButton} onPress={() => router.push('/(tabs)/explore')} activeOpacity={0.85}>
             <MaterialCommunityIcons name="chevron-left" size={22} color="#1E293B" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Réclamations</Text>

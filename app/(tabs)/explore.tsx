@@ -1,27 +1,23 @@
 import RequireAuth from '@/components/RequireAuth';
-import { formatTimeWithSeconds, generateLounges, getCurrentTime, getWeatherConditions } from '@/data/airportDatabase';
+import { formatTimeWithSeconds, getCurrentTime, getWeatherConditions } from '@/data/airportDatabase';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SHOPS_DATA } from './shop';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function ExploreScreen() {
   const [currentTime, setCurrentTime] = useState(getCurrentTime());
-  const [lounges, setLounges] = useState<any[]>([]);
   const [weather, setWeather] = useState<any>(null);
-
-
 
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentTime(getCurrentTime());
-      setLounges(generateLounges());
       setWeather(getWeatherConditions());
     }, 5000);
 
-    setLounges(generateLounges());
     setWeather(getWeatherConditions());
 
     return () => clearInterval(interval);
@@ -84,74 +80,71 @@ export default function ExploreScreen() {
             </View>
           )}
 
-          {/* Lounges Section */}
+          {/* Boutiques Section */}
           <View style={styles.sectionHeader}>
             <View style={styles.sectionIcon}>
-              <MaterialCommunityIcons name="sofa-single" size={18} color="#B22222" />
+              <MaterialCommunityIcons name="store" size={18} color="#B22222" />
             </View>
-            <Text style={styles.sectionTitle}>Salons VIP</Text>
+            <Text style={styles.sectionTitle}>Boutiques & Services</Text>
             <View style={styles.sectionLine} />
           </View>
 
-          {lounges.map((lounge, index) => (
+          {SHOPS_DATA.map((shop) => (
             <View
-              key={lounge.id}
+              key={shop.id}
               style={styles.loungeCard}
             >
-              <TouchableOpacity activeOpacity={0.9} style={styles.loungeInner}>
-                {lounge.hasPromo && (
-                  <View style={styles.loungePromoRibbon}>
-                    <Text style={styles.promoRibbonText}>-{lounge.promoDiscount}%</Text>
-                  </View>
-                )}
-
+              <TouchableOpacity 
+                activeOpacity={0.9} 
+                style={styles.loungeInner}
+                onPress={() => router.push({ pathname: '/(tabs)/shop', params: { shopId: shop.id } })}
+              >
                 <View style={styles.loungeTop}>
                   <View style={[
                     styles.loungeIconBox,
-                    { backgroundColor: lounge.hasPromo ? 'rgba(212, 175, 55, 0.15)' : 'rgba(21, 101, 192, 0.08)' }
+                    { backgroundColor: `${shop.color}15` }
                   ]}>
                     <MaterialCommunityIcons
-                      name="sofa-single"
+                      name={shop.icon as any}
                       size={28}
-                      color={lounge.hasPromo ? '#D4AF37' : '#1565C0'}
+                      color={shop.color}
                     />
                   </View>
                   <View style={styles.loungeInfo}>
-                    <Text style={styles.loungeName}>{lounge.name}</Text>
-                    <Text style={styles.loungeTerminal}>Terminal {lounge.terminal} • Casablanca CMN</Text>
+                    <Text style={styles.loungeName}>{shop.name}</Text>
+                    <Text style={styles.loungeTerminal}>{shop.type} • Terminal {shop.terminal}</Text>
                   </View>
-                  <View style={styles.occupancyCircle}>
-                    <Text style={styles.occupancyValue}>{lounge.currentOccupancy}%</Text>
-                    <Text style={styles.occupancyLabel}>occupé</Text>
+                  <View style={styles.shopArrow}>
+                    <MaterialCommunityIcons name="chevron-right" size={24} color="#94A3B8" />
                   </View>
                 </View>
 
-                <View style={styles.loungeAmenities}>
-                  {lounge.amenities.map((amenity: string, i: number) => (
-                    <View key={i} style={styles.amenityChip}>
-                      <MaterialCommunityIcons
-                        name={getAmenityIcon(amenity)}
-                        size={12}
-                        color="#64748B"
+                {/* Featured Products Images */}
+                <View style={styles.featuredImagesRow}>
+                  {shop.featuredImages.map((img, idx) => (
+                    <View key={idx} style={styles.featuredImageWrapper}>
+                      <Image 
+                        source={{ uri: img }} 
+                        style={styles.featuredImage}
+                        resizeMode="cover"
                       />
-                      <Text style={styles.amenityText}>{amenity}</Text>
                     </View>
                   ))}
+                  <View style={styles.moreProductsBox}>
+                    <Text style={styles.moreProductsNumber}>+{shop.items.length - 3}</Text>
+                    <Text style={styles.moreProductsText}>articles</Text>
+                  </View>
                 </View>
 
-                <View style={styles.loungeBottom}>
-                  <View style={styles.loungeCapacity}>
-                    <View style={styles.capacityBar}>
-                      <View style={[styles.capacityFill, { width: `${lounge.currentOccupancy}%` }]} />
-                    </View>
-                    <Text style={styles.capacityText}>
-                      {Math.round(lounge.maxCapacity * (1 - lounge.currentOccupancy / 100))} places disponibles
-                    </Text>
+                <View style={styles.shopMeta}>
+                  <View style={styles.shopMetaItem}>
+                    <MaterialCommunityIcons name="tag-multiple" size={14} color="#64748B" />
+                    <Text style={styles.shopMetaText}>{shop.items.length} articles</Text>
                   </View>
-                  <TouchableOpacity style={styles.bookButton}>
-                    <Text style={styles.bookButtonText}>Réserver</Text>
-                    <MaterialCommunityIcons name="arrow-right" size={16} color="#fff" />
-                  </TouchableOpacity>
+                  <View style={styles.shopMetaItem}>
+                    <MaterialCommunityIcons name="map-marker" size={14} color="#64748B" />
+                    <Text style={styles.shopMetaText}>Terminal {shop.terminal}</Text>
+                  </View>
                 </View>
               </TouchableOpacity>
             </View>
@@ -183,7 +176,7 @@ export default function ExploreScreen() {
               <Text style={styles.serviceDesc}>Support 24/7</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.serviceCard} activeOpacity={0.85}>
+            <TouchableOpacity style={styles.serviceCard} activeOpacity={0.85} onPress={() => router.push('/(tabs)/loyalty')}>
               <View style={[styles.serviceIcon, { backgroundColor: 'rgba(106, 27, 154, 0.1)' }]}>
                 <MaterialCommunityIcons name="star-circle" size={28} color="#6A1B9A" />
               </View>
@@ -437,7 +430,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   loungeIconBox: {
     width: 56,
@@ -459,6 +452,65 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#94A3B8',
     marginTop: 2,
+  },
+  shopArrow: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  featuredImagesRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 14,
+  },
+  featuredImageWrapper: {
+    width: 70,
+    height: 70,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#F1F5F9',
+  },
+  featuredImage: {
+    width: '100%',
+    height: '100%',
+  },
+  moreProductsBox: {
+    width: 70,
+    height: 70,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  moreProductsNumber: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1E293B',
+  },
+  moreProductsText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#94A3B8',
+  },
+  shopMeta: {
+    flexDirection: 'row',
+    gap: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  shopMetaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  shopMetaText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
   },
   occupancyCircle: {
     alignItems: 'center',

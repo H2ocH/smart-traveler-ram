@@ -1,0 +1,456 @@
+\documentclass[10pt,a4paper,twocolumn]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\geometry{left=1.5cm, right=1.5cm, top=2cm, bottom=2cm, columnsep=0.8cm}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage[explicit]{titlesec}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage[skins]{tcolorbox}
+
+% Nouvelle boîte esthétique pour les paragraphes (Style défaut)
+\newtcolorbox{aestheticbox}[2][]{%
+    enhanced,
+    colback=ramblue!5!white,
+    colframe=ramblue,
+    leftrule=3pt,
+    rightrule=0pt,
+    toprule=0pt,
+    bottomrule=0pt,
+    boxsep=5pt,
+    arc=0pt,
+    fonttitle=\bfseries,
+    coltitle=ramblue,
+    title={#2},
+    detach title,
+    before upper={\tcbtitle\par\vspace{2pt}},
+    #1
+}
+
+% Style Tech (Barre de titre en haut, plus "Ingénieur")
+\newtcolorbox{techbox}[2][]{%
+    enhanced,
+    colback=white,
+    colframe=darkblue,
+    coltitle=white,
+    fonttitle=\bfseries,
+    title={#2},
+    boxrule=0.5pt,
+    sharp corners,
+    drop shadow=black!15!white,
+    #1
+}
+
+% Style Impact (Coins arrondis, accent doré)
+\newtcolorbox{impactbox}[2][]{%
+    enhanced,
+    colback=goldaccent!10!white,
+    colframe=goldaccent,
+    coltitle=black,
+    fonttitle=\bfseries,
+    title={#2},
+    boxrule=1pt,
+    arc=4mm,
+    boxsep=4pt,
+    detach title,
+    before upper={\textcolor{darkblue}{\tcbtitle}\par\vspace{2pt}},
+    #1
+}
+\usepackage{fontawesome5}
+\usepackage{lmodern}
+\usepackage{multicol}
+\usepackage{titling}
+\usepackage{float}
+\usepackage{tikz}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{colortbl}
+\usepackage{caption}
+
+% Couleurs RAM - Palette enrichie
+\definecolor{ramblue}{RGB}{12, 44, 119}
+\definecolor{ramred}{RGB}{196, 22, 28}
+\definecolor{lightblue}{RGB}{51, 153, 255}
+\definecolor{darkblue}{RGB}{8, 30, 80}
+\definecolor{goldaccent}{RGB}{212, 175, 55}
+\definecolor{softgray}{RGB}{245, 245, 250}
+\definecolor{textgray}{RGB}{80, 80, 90}
+
+% Configuration des Liens
+\hypersetup{
+    colorlinks=true,
+    linkcolor=ramblue,
+    urlcolor=lightblue,
+    citecolor=ramred,
+}
+
+% Style des captions
+\captionsetup{
+    font={small,sf},
+    labelfont={bf,color=ramblue},
+    format=hang,
+    margin=10pt
+}
+
+% Style des sections - Titre complet dans une boîte
+\titleformat{\section}
+{\normalfont\Large\bfseries}
+{}{0pt}{\colorbox{ramblue}{\parbox{\dimexpr\columnwidth-2\fboxsep\relax}{\textcolor{white}{\thesection.~#1}}}}
+\titlespacing*{\section}{0pt}{14pt}{8pt}
+
+\titleformat{\subsection}
+{\color{ramred}\normalfont\large\bfseries}
+{\textcolor{ramblue}{\faCaretRight}~\thesubsection}{0.5em}{#1}
+\titlespacing*{\subsection}{0pt}{10pt}{4pt}
+
+\titleformat{\subsubsection}
+{\color{darkblue}\normalfont\normalsize\bfseries}
+{\textcolor{ramred}{\faAngleRight}~\thesubsubsection}{0.5em}{#1}
+\titlespacing*{\subsubsection}{0pt}{6pt}{2pt}
+
+% Listes stylisées - Icônes cohérentes
+\setlist[itemize]{leftmargin=*, itemsep=2pt, topsep=4pt, parsep=1pt}
+\setlist[enumerate]{leftmargin=*, itemsep=2pt, topsep=4pt, parsep=1pt}
+\setlist[itemize,1]{label=\textcolor{ramblue}{\faCheck}}
+\setlist[itemize,2]{label=\textcolor{ramred}{\faAngleRight}}
+
+% En-tête et pied de page élégants
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\fancyhead[L]{\small\textcolor{ramblue}{\textbf{\faPlane~RAM Digital Companion}}}
+\fancyhead[R]{\small\textcolor{goldaccent}{\thepage}}
+\fancyfoot[C]{\textcolor{ramred}{\rule{3cm}{0.5pt}}}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{3pt}
+
+\begin{document}
+
+% En-tête Executive Summary
+\twocolumn[
+\begin{center}
+\setlength{\fboxrule}{2pt}
+\setlength{\fboxsep}{12pt}
+\fcolorbox{ramblue}{white}{%
+\begin{minipage}{0.92\textwidth}
+% Logos
+\begin{minipage}{0.18\textwidth}
+\centering
+\includegraphics[width=0.85\linewidth]{logo-ecc.png}
+\end{minipage}%
+\hfill
+\begin{minipage}{0.58\textwidth}
+\centering
+{\footnotesize\textcolor{goldaccent}{\faGlobe~PROJET INNOVATION}}\\[4pt]
+{\Large\textbf{\textcolor{ramblue}{EXECUTIVE SUMMARY}}}\\[3pt]
+{\small\textcolor{ramred}{\rule{4cm}{1pt}}}
+\end{minipage}%
+\hfill
+\begin{minipage}{0.18\textwidth}
+\centering
+\includegraphics[width=0.85\linewidth]{logo-ram.png}
+\end{minipage}
+
+\vspace{0.5cm}
+
+\begin{minipage}{0.58\textwidth}
+{\LARGE\textbf{\textcolor{ramblue}{RAM Self-Service Travel Companion}}}\\[6pt]
+{\large\textit{\textcolor{textgray}{Digitalisation du Parcours Passager}}}\\[8pt]
+\textcolor{goldaccent}{\rule{3cm}{1.5pt}}\\[8pt]
+{\small\textbf{\textcolor{darkblue}{Tuteur:}} M. BELHBOUB Anouar}\\[3pt]
+{\small\textbf{\textcolor{darkblue}{Année académique:}} 2025-2026}
+\end{minipage}%
+\hfill
+\begin{minipage}{0.36\textwidth}
+\raggedleft
+{\small\textbf{\textcolor{ramblue}{Réalisé par :}}}\\[6pt]
+{\footnotesize
+\textcolor{textgray}{ATTOUBI Mohammed-Nour}\\
+\textcolor{textgray}{DES MOULINS Lucien}\\
+\textcolor{textgray}{EL BOUCHTI Walid}\\
+\textcolor{textgray}{ENNACIRI Youness}\\
+\textcolor{textgray}{LAFKIH Rihab}}
+\end{minipage}
+\end{minipage}%
+}
+\end{center}
+\vspace{0.6cm}
+]
+
+\section{Contexte et Opportunité}
+
+Le secteur aérien connaît une croissance soutenue et Royal Air Maroc transporte des millions de passagers chaque année. Cependant, l'expérience passager fait face à des défis opérationnels majeurs.
+
+\begin{aestheticbox}{\faGlobe~Transformation du secteur}
+La digitalisation offre des opportunités stratégiques cruciales, permettant de réduire les coûts opérationnels, d'améliorer significativement la satisfaction client, de désengorger les zones critiques de l'aéroport et de renforcer l'image innovante de la compagnie.
+\end{aestheticbox}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.6\columnwidth]{airport-digitalization.png}
+\caption{Transformation digitale des aéroports}
+\end{figure}
+
+\section{Énoncé du Problème}
+
+Le parcours passager présente plusieurs points de friction critiques qui impactent l'expérience globale de voyage.
+
+\subsection{Récupération Bagages}
+\begin{aestheticbox}[colframe=ramred, colback=ramred!5!white]{\faSuitcase~Identification difficile}
+L'identification des bagages sur le tapis roulant est une source de stress majeure, de nombreux passagers peinant à distinguer leurs valises parmi d'autres similaires. Cette étape génère des temps d'attente importants et, malheureusement, des erreurs de récupération qui sont coûteuses à gérer pour la compagnie.
+\end{aestheticbox}
+
+\subsection{Réclamations}
+\begin{aestheticbox}[colframe=ramred, colback=ramred!5!white]{\faFileAlt~Processus manuel}
+Le processus actuel de gestion des réclamations repose souvent sur des formulaires manuels complexes. Le traitement initial est long et les passagers manquent de visibilité sur l'avancement de leur dossier, ce qui engorge les comptoirs service client.
+\end{aestheticbox}
+
+\subsection{Navigation Aéroport}
+\begin{aestheticbox}[colframe=ramred, colback=ramred!5!white]{\faMapMarkerAlt~Orientation complexe}
+S'orienter dans un grand aéroport reste un défi pour de nombreux voyageurs qui se sentent perdus. L'information générique affichée sur les écrans ne suffit pas toujours, créant une dépendance envers le personnel au sol, particulièrement pour les personnes à mobilité réduite ou âgées.
+\end{aestheticbox}
+
+\begin{aestheticbox}[colframe=ramred, colback=ramred!5!white]{\faExclamationTriangle~Impact}
+Ces dysfonctionnements engendrent des coûts importants pour la compagnie, affectent la satisfaction client et augmentent le stress des passagers.
+\end{aestheticbox}
+
+\section{Solution Proposée}
+
+Application mobile multiplateforme (iOS/Android) intégrant 5 fonctionnalités principales:
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.6\columnwidth]{app-interface-concept.png}
+\caption{Interface principale de l'application}
+\end{figure}
+
+\subsection{1. QR Code Bagages}
+\begin{techbox}{\faQrcode~Vérification instantanée}
+Scan instantané pour vérifier l'appartenance du bagage (notification verte/rouge). Fonctionne hors ligne.
+\end{techbox}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.5\columnwidth]{scan1-1.png}
+\caption{Scan QR code bagage}
+\end{figure}
+
+\subsection{2. Mesure Dimensions}
+\begin{techbox}{\faRulerCombined~Précision numérique}
+Computer vision via caméra smartphone pour mesurer les bagages (±2 cm de précision).
+\end{techbox}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.5\columnwidth]{mesure.jpeg}
+\caption{Mesure automatique des dimensions}
+\end{figure}
+
+\subsection{3. Estimation Poids}
+\begin{techbox}{\faWeightHanging~Calcul intelligent}
+Base de données d'articles pour calculer le poids estimé du bagage par composition.
+\end{techbox}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.5\columnwidth]{screenshot-weight-estimation.png}
+\caption{Estimation du poids par composition}
+\end{figure}
+
+\subsection{4. Réclamation Self-Service}
+\begin{techbox}{\faFileContract~Gestion simplifiée}
+Formulaire digital structuré rapide avec suivi en temps réel via numéro de dossier.
+\end{techbox}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.5\columnwidth]{screenshot-claim-form.png}
+\caption{Formulaire de réclamation}
+\end{figure}
+
+\subsection{5. Guide Aéroport}
+\begin{techbox}{\faRoute~Orientation assistée}
+Navigation étape par étape avec persistance d'état et validation phygitale par QR codes.
+\end{techbox}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.45\columnwidth]{guide1.jpg}
+\caption{Navigation guidée dans l'aéroport}
+\end{figure}
+
+\section{Objectifs Clés}
+
+\begin{impactbox}{\faBullseye~Objectifs Principaux}
+Notre but premier est de réduire significativement les erreurs de bagages et le nombre de bagages non-conformes à l'embarquement. Nous visons également à diminuer drastiquement le temps de traitement des réclamations tout en améliorant la satisfaction des passagers concernant leur navigation dans l'aéroport L'adoption de l'application par les voyageurs est un indicateur clé de succès.
+\end{impactbox}
+
+\begin{impactbox}{\faEye~Vision à Long Terme}
+À plus long terme, nous envisageons un déploiement sur l'ensemble des vols Royal Air Maroc et une expansion vers les hubs africains majeurs. L'intégration de nouvelles technologies comme le tracking RFID et l'intelligence artificielle pour la prédiction des flux renforcera la position de leader technologique de la compagnie.
+\end{impactbox}
+
+\section{Innovations et Durabilité}
+
+\subsection{Innovations Techniques}
+\subsection{Innovations Techniques}
+\begin{impactbox}{\faMicrochip~Technologies avancées}
+Le projet intègre des technologies avancées de Computer Vision pour permettre la mesure des bagages via un simple smartphone, sans équipement dédié. Nous utilisons également un estimateur sémantique pour calculer le poids basé sur la composition du bagage. L'architecture modulaire en microservices assure la scalabilité de la solution.
+\end{impactbox}
+
+\subsection{Impact Durable}
+\begin{impactbox}{\faLeaf~Approche écologique}
+La solution s'inscrit dans une démarche durable en réduisant l'utilisation de papier grâce à la digitalisation des formulaires. L'optimisation des flux passagers contribue indirectement à la réduction des émissions, tandis que l'approche multilingue et accessible favorise l'inclusivité.
+\end{impactbox}
+
+\section{Proposition de Valeur}
+
+\subsection{Pour Passagers}
+\begin{impactbox}{\faUserClock~Autonomie et gain de temps}
+Le compagnon digital offre une autonomie accrue et un contrôle total sur le voyage, réduisant considérablement le stress aéroportuaire. Il permet aux passagers de gagner un temps précieux lors des contrôles et de la navigation, tout en évitant les surcoûts liés aux bagages grâce à la vérification préventive.
+\end{impactbox}
+
+\subsection{Pour RAM}
+\begin{impactbox}{\faChartLine~Efficacité opérationnelle}
+Pour la compagnie, l'application représente un levier d'économies opérationnelles important en réduisant les coûts de gestion des litiges bagages. Elle améliore le Net Promoter Score (NPS) et renforce l'image de marque de Royal Air Maroc comme leader de l'innovation en Afrique.
+\end{impactbox}
+
+\section{Modèle Économique}
+
+\subsection{Sources de Revenus}
+\begin{aestheticbox}[colframe=goldaccent, colback=goldaccent!5!white]{\faMoneyBillWave~Modèle de licence}
+Le modèle économique repose principalement sur l'octroi d'une licence d'utilisation à Royal Air Maroc. Des revenus annexes peuvent être générés par des commissions sur des services tiers intégrés (assurances voyage, livraison de bagages) et par la valorisation des données d'analyse anonymisées pour l'amélioration des services aéroportuaires.
+\end{aestheticbox}
+
+\subsection{Structure de Coûts}
+\begin{aestheticbox}[colframe=goldaccent, colback=goldaccent!5!white]{\faCoins~Investissement initial}
+Les coûts principaux concernent le développement et la maintenance de l'application, ainsi que l'hébergement cloud. Des investissements sont également nécessaires pour le marketing lors du lancement et pour la formation du personnel RAM à l'utilisation du volet administratif de la solution.
+\end{aestheticbox}
+
+\subsection{Viabilité}
+\begin{aestheticbox}[colframe=goldaccent, colback=goldaccent!5!white]{\faPiggyBank~Rentabilité théorique}
+Le projet présente une forte rentabilité théorique grâce à la réduction massive des coûts opérationnels liés aux erreurs de bagages. Le retour sur investissement est assuré par l'économie réalisée sur le traitement des réclamations et l'amélioration de l'efficacité opérationnelle.
+\end{aestheticbox}
+
+\section{Ressources et Activités Clés}
+
+\subsection{Ressources Humaines}
+\begin{aestheticbox}{\faUsers~Équipe pluridisciplinaire}
+Le projet s'appuie sur une équipe complémentaire composée de 3 développeurs full-stack pour la réalisation technique, un designer UX/UI garant de l'expérience utilisateur, un chef de projet pour la coordination et deux agents de support pour l'assistance opérationnelle.
+\end{aestheticbox}
+
+\subsection{Ressources Techniques}
+\begin{aestheticbox}{\faServer~Infrastructure robuste}
+L'architecture repose sur une infrastructure cloud scalable (AWS/Azure) hébergeant nos bases de données MongoDB. Les échanges de données sont fluidifiés par des API REST et GraphQL performantes, tandis que des outils d'analytics permettent un suivi précis des KPIs.
+\end{aestheticbox}
+
+\subsection{Activités Principales}
+\begin{aestheticbox}{\faTasks~Méthodologie agile}
+Le développement suit une approche agile avec des sprints de deux semaines, intégrant des tests utilisateurs continus. La maintenance, les mises à jour régulières, la formation du personnel RAM et le marketing digital constituent le cœur de nos opérations quotidiennes.
+\end{aestheticbox}
+
+\section{Architecture Technique}
+
+\subsection{Architecture Globale}
+\begin{techbox}{\faLayerGroup~Stack technique}
+Notre solution technique est construite autour d'un frontend réactif en React Native compatible iOS et Android, soutenu par un backend performant en Node.js et Express. La persistance des données est assurée par MongoDB couplé à Redis pour le cache, le tout hébergé sur une infrastructure AWS sécurisée utilisant les derniers standards de chiffrement.
+\end{techbox}
+
+\subsection{Modules Principaux}
+\begin{techbox}{\faCubes~Modularité}
+L'application est divisée en modules fonctionnels distincts : un module d'authentification sécurisé, un module bagages gérant le scan et la mesure, un module de réclamations pour le suivi des dossiers, un guide de navigation aéroportuaire persistant et un module d'analyse de données pour le pilotage.
+\end{techbox}
+
+\subsection{Intégrations}
+\begin{techbox}{\faNetworkWired~Écosystème connecté}
+La solution s'interface nativement avec les systèmes de Royal Air Maroc pour les réservations, les infrastructures aéroportuaires de l'ONDA, les passerelles de paiement sécurisées (CMI, Stripe) et les services de notifications Firebase.
+\end{techbox}
+
+\section{Technologies Utilisées}
+
+\subsection{Mobile}
+\begin{techbox}{\faMobileAlt~Développement mobile}
+Nous exploitons la puissance de React Native 0.72 pour une expérience native fluide. L'intelligence artificielle embarquée repose sur TensorFlow Lite pour la vision par ordinateur, avec un stockage local optimisé via SQLite.
+\end{techbox}
+
+\subsection{Backend}
+\begin{techbox}{\faServer~Serveur et API}
+Le backend est propulsé par Node.js 18 LTS et Express.js, garantissant performance et stabilité. Les interactions en temps réel sont gérées par Socket.io, et l'authentification est sécurisée par le protocole JWT.
+\end{techbox}
+
+\subsection{Base de Données}
+\begin{techbox}{\faDatabase~Gestion des données}
+Notre stratégie de stockage hybride utilise MongoDB 6.0 comme base principale pour sa flexibilité, Redis 7.0 pour le caching haute performance, et PostgreSQL pour l'analyse structurelle des données complexes.
+\end{techbox}
+
+\subsection{DevOps}
+\begin{techbox}{\faInfinity~Déploiement continu}
+L'industrialisation est assurée par une chaîne CI/CD via GitHub Actions, avec une conteneurisation Docker et une orchestration Kubernetes. Le monitoring proactif est confié à Datadog et la qualité du code est garantie par des tests Jest et Cypress.
+\end{techbox}
+
+\subsection{IA/ML}
+\begin{techbox}{\faBrain~Intelligence Artificielle}
+Les fonctionnalités avancées s'appuient sur TensorFlow pour la mesure dimensionnelle, OpenCV pour le traitement d'image sophistiqué et Scikit-learn pour les algorithmes prédictifs.
+\end{techbox}
+
+\section{Partenaires}
+
+\subsection{Partenaires Stratégiques}
+\begin{aestheticbox}{\faHandshake~Alliances stratégiques}
+Notre collaboration avec l'ONDA permet une intégration profonde aux systèmes aéroportuaires, tandis que le partenariat avec la DSI de RAM offre un accès privilégié aux API. Des accords avec des assureurs et des services de livraison enrichissent notre offre de services.
+\end{aestheticbox}
+
+\subsection{Partenaires Techniques}
+\begin{aestheticbox}{\faLaptopCode~Support technologique}
+Nous nous appuyons sur l'excellence d'AWS pour notre infrastructure et de Twilio pour les communications. La gestion des paiements est confiée à Stripe et au CMI, et la cartographie précise est assurée par Google Maps Platform.
+\end{aestheticbox}
+
+\subsection{Partenaires Académiques}
+\begin{aestheticbox}{\faUniversity~Ancrage académique}
+Les partenariats avec les universités nous permettent de rester à la pointe de la recherche en IA, tandis que les liens avec l'INPT et l'EMI facilitent le recrutement des meilleurs talents ingénieurs.
+\end{aestheticbox}
+
+\section{Roadmap}
+
+\subsection{Phase 1: Conception (Mois 1)}
+\begin{aestheticbox}{\faPencilRuler~Fondations du projet}
+Ce premier mois est consacré à l'analyse détaillée des besoins et à la rédaction des spécifications fonctionnelles. Parallèlement, nous concevons le design UX/UI et les maquettes interactives, tout en définissant l'architecture technique et en mettant en place l'environnement de développement.
+\end{aestheticbox}
+
+\subsection{Phase 2: Développement (Mois 2)}
+\begin{aestheticbox}{\faCode~Construction du MVP}
+Le cœur du développement se concentre sur l'implémentation des 5 fonctionnalités principales et l'intégration des APIs externes. Cette phase intensive inclut également l'écriture des tests unitaires et l'optimisation des performances pour assurer une fluidité optimale.
+\end{aestheticbox}
+
+\subsection{Phase 3: Finalisation (Mois 3)}
+\begin{aestheticbox}{\faCheckCircle~Livraison et déploiement}
+La dernière phase vise à valider la solution par des tests utilisateurs complets et les corrections nécessaires. Nous finalisons la documentation technique et utilisateur, préparons l'infrastructure de production et livrons le MVP fonctionnel prêt à l'emploi.
+\end{aestheticbox}
+
+\section{Conclusion}
+
+\begin{impactbox}{\faMagic~Transformation de l'expérience}
+Le \textbf{RAM Self-Service Travel Companion} propose une transformation concrète de l'expérience voyageur en s'attaquant aux points de friction majeurs du parcours aéroportuaire. En tant que projet d'ingénierie, il démontre la faisabilité technique d'une solution intégrant intelligence artificielle et services mobiles pour résoudre des problèmes opérationnels réels.
+\end{impactbox}
+
+\begin{impactbox}{\faBinoculars~Perspectives d'avenir}
+Ce prototype fonctionnel constitue une base solide pour une future industrialisation, offrant des perspectives prometteuses tant pour l'amélioration de la satisfaction client que pour l'optimisation des processus de Royal Air Maroc. L'approche modulaire adoptée permet d'envisager sereinement les évolutions futures et l'ajout de nouvelles fonctionnalités innovantes.
+\end{impactbox}
+
+\textbf{Ensemble, imaginons le voyage aérien de demain au Maroc.}
+
+\section{Références}
+
+\begin{enumerate}[leftmargin=*,label={\arabic*.},itemsep=2pt]
+\item ONDA (2023). \textit{Rapport annuel - Statistiques trafic aérien}.
+\item IATA (2024). \textit{Digital Transformation in Aviation Report}.
+\item SITA (2024). \textit{Baggage IT Insights 2024}.
+\item Deloitte (2023). \textit{Airport Digital Transformation Study}.
+\item Royal Air Maroc (2023). \textit{Rapport Annuel et données internes}.
+\end{enumerate}
+
+\end{document}
