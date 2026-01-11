@@ -1,0 +1,211 @@
+{
+  "timestamp": "2025-01-15T09:30:00",
+  "prediction_time": "2026-01-11T16:59:16.014023",
+  "model_type": "cox",
+  "total_passengers": 10,
+  "avg_total_remaining_minutes": 291.6,
+  "passengers_by_step": {
+    "Entree_Terminal": 1,
+    "Enregistrement": 1,
+    "Controle_Securite": 2,
+    "Controle_Passeport": 1,
+    "Duty_Free": 1,
+    "Porte_Embarquement": 1,
+    "Vol": 1,
+    "Recuperation_Bagages": 1,
+    "Sortie_Aeroport": 1
+  },
+  "predictions": [
+    {
+      "passenger_id": "P00001",
+      "current_step": 3,
+      "current_step_name": "Controle_Securite",
+      "time_spent_current_step": 12.5,
+      "remaining_current_step_mean": 12.0,
+      "remaining_current_step_median": 11.4,
+      "future_steps": {
+        "Controle_Passeport": 2.5,
+        "Duty_Free": 15.0,
+        "Porte_Embarquement": 15.6,
+        "Vol": 298.3,
+        "Recuperation_Bagages": 16.4,
+        "Sortie_Aeroport": 4.7
+      },
+      "total_remaining_minutes": 364.4,
+      "airport": "CDG",
+      "flight_type": "international",
+      "hour_of_day": 7,
+      "active_users_in_step": 45
+    },
+    {
+      "passenger_id": "P00002",
+      "current_step": 1,
+      "current_step_name": "Entree_Terminal",
+      "time_spent_current_step": 3.0,
+      "remaining_current_step_mean": 3.2,
+      "remaining_current_step_median": 3.1,
+      "future_steps": {
+        "Enregistrement": 7.9,
+        "Controle_Securite": 17.6,
+        "Controle_Passeport": 1.6,
+        "Duty_Free": 13.2,
+        "Porte_Embarquement": 17.9,
+        "Vol": 90.8,
+        "Recuperation_Bagages": 11.1,
+        "Sortie_Aeroport": 4.4
+      },
+      "total_remaining_minutes": 167.5,
+      "airport": "ORY",
+      "flight_type": "domestic",
+      "hour_of_day": 9,
+      "active_users_in_step": 28
+    },
+    {
+      "passenger_id": "P00003",
+      "current_step": 5,
+      "current_step_name": "Duty_Free",
+      "time_spent_current_step": 8.0,
+      "remaining_current_step_mean": 12.1,
+      "remaining_current_step_median": 10.8,
+      "future_steps": {
+        "Porte_Embarquement": 19.9,
+        "Vol": 553.9,
+        "Recuperation_Bagages": 20.9,
+        "Sortie_Aeroport": 4.3
+      },
+      "total_remaining_minutes": 611.2,
+      "airport": "LHR",
+      "flight_type": "international",
+      "hour_of_day": 6,
+      "active_users_in_step": 38
+    },
+    {
+      "passenger_id": "P00004",
+      "current_step": 7,
+      "current_step_name": "Vol",
+      "time_spent_current_step": 45.0,
+      "remaining_current_step_mean": 497.9,
+      "remaining_current_step_median": 430.9,
+      "future_steps": {
+        "Recuperation_Bagages": 13.3,
+        "Sortie_Aeroport": 4.2
+      },
+      "total_remaining_minutes": 515.4,
+      "airport": "JFK",
+      "flight_type": "international",
+      "hour_of_day": 5,
+      "active_users_in_step": 85
+    },
+    {
+      "passenger_id": "P00005",
+      "current_step": 2,
+      "current_step_name": "Enregistrement",
+      "time_spent_current_step": 5.5,
+      "remaining_current_step_mean": 5.8,
+      "remaining_current_step_median": 5.4,
+      "future_steps": {
+        "Controle_Securite": 15.2,
+        "Controle_Passeport": 1.9,
+        "Duty_Free": 13.3,
+        "Porte_Embarquement": 22.2,
+        "Vol": 111.8,
+        "Recuperation_Bagages": 10.4,
+        "Sortie_Aeroport": 4.0
+      },
+      "total_remaining_minutes": 184.6,
+      "airport": "NCE",
+      "flight_type": "domestic",
+      "hour_of_day": 8,
+      "active_users_in_step": 22
+    },
+    {
+      "passenger_id": "P00006",
+      "current_step": 6,
+      "current_step_name": "Porte_Embarquement",
+      "time_spent_current_step": 15.0,
+      "remaining_current_step_mean": 13.1,
+      "remaining_current_step_median": 12.8,
+      "future_steps": {
+        "Vol": 301.2,
+        "Recuperation_Bagages": 16.5,
+        "Sortie_Aeroport": 4.7
+      },
+      "total_remaining_minutes": 335.5,
+      "airport": "CDG",
+      "flight_type": "international",
+      "hour_of_day": 6,
+      "active_users_in_step": 32
+    },
+    {
+      "passenger_id": "P00007",
+      "current_step": 4,
+      "current_step_name": "Controle_Passeport",
+      "time_spent_current_step": 4.0,
+      "remaining_current_step_mean": 4.5,
+      "remaining_current_step_median": 4.5,
+      "future_steps": {
+        "Duty_Free": 11.4,
+        "Porte_Embarquement": 17.5,
+        "Vol": 443.5,
+        "Recuperation_Bagages": 20.1,
+        "Sortie_Aeroport": 5.2
+      },
+      "total_remaining_minutes": 502.3,
+      "airport": "FRA",
+      "flight_type": "international",
+      "hour_of_day": 7,
+      "active_users_in_step": 18
+    },
+    {
+      "passenger_id": "P00008",
+      "current_step": 8,
+      "current_step_name": "Recuperation_Bagages",
+      "time_spent_current_step": 10.0,
+      "remaining_current_step_mean": 12.8,
+      "remaining_current_step_median": 12.7,
+      "future_steps": {
+        "Sortie_Aeroport": 3.8
+      },
+      "total_remaining_minutes": 16.6,
+      "airport": "DXB",
+      "flight_type": "international",
+      "hour_of_day": 2,
+      "active_users_in_step": 25
+    },
+    {
+      "passenger_id": "P00009",
+      "current_step": 3,
+      "current_step_name": "Controle_Securite",
+      "time_spent_current_step": 7.0,
+      "remaining_current_step_mean": 16.1,
+      "remaining_current_step_median": 14.9,
+      "future_steps": {
+        "Controle_Passeport": 1.2,
+        "Duty_Free": 12.9,
+        "Porte_Embarquement": 18.9,
+        "Vol": 154.2,
+        "Recuperation_Bagages": 8.8,
+        "Sortie_Aeroport": 3.4
+      },
+      "total_remaining_minutes": 215.5,
+      "airport": "BOD",
+      "flight_type": "domestic",
+      "hour_of_day": 8,
+      "active_users_in_step": 45
+    },
+    {
+      "passenger_id": "P00010",
+      "current_step": 9,
+      "current_step_name": "Sortie_Aeroport",
+      "time_spent_current_step": 4.0,
+      "remaining_current_step_mean": 3.3,
+      "remaining_current_step_median": 3.6,
+      "future_steps": {},
+      "total_remaining_minutes": 3.3,
+      "airport": "MAD",
+      "flight_type": "international",
+      "hour_of_day": 1,
+      "active_users_in_step": 15
+    }
+  ]
+}

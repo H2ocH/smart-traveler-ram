@@ -1,5 +1,6 @@
 import RequireAuth from '@/components/RequireAuth';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useIsFocused } from '@react-navigation/native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import React, { useMemo, useRef, useState } from 'react';
 import {
@@ -44,6 +45,7 @@ function clamp(n: number, min: number, max: number) {
 function MeasureScreenContent() {
   const cameraRef = useRef<CameraView>(null);
   const [permission, requestPermission] = useCameraPermissions();
+  const isFocused = useIsFocused();
 
   const [photoUri, setPhotoUri] = useState<string | null>(null);
 
@@ -278,7 +280,7 @@ function MeasureScreenContent() {
       {!photoUri ? (
         <View style={styles.card}>
           <View style={styles.cameraBox}>
-            <CameraView ref={cameraRef} style={styles.camera} facing="back" />
+            {isFocused && <CameraView ref={cameraRef} style={styles.camera} facing="back" />}
           </View>
 
           <View style={styles.tipBox}>

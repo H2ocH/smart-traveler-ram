@@ -1,4 +1,5 @@
 import RequireAuth from '@/components/RequireAuth';
+import { usePassenger } from '@/context/PassengerContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Keyboard, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
@@ -9,6 +10,41 @@ type Item = {
   grams: number;
   category: 'Vêtements' | 'Toiletries' | 'Tech' | 'Divers';
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
+};
+
+// Limites de bagages Royal Air Maroc selon la classe
+type TravelClass = 'economy' | 'business' | 'first';
+
+interface BaggageLimits {
+  cabinKg: number;
+  cabinCount: number;
+  checkedKg: number;
+  checkedCount: number;
+  className: string;
+}
+
+const RAM_BAGGAGE_LIMITS: Record<TravelClass, BaggageLimits> = {
+  economy: {
+    cabinKg: 10,
+    cabinCount: 1,
+    checkedKg: 23,
+    checkedCount: 1,
+    className: 'Économique',
+  },
+  business: {
+    cabinKg: 10,
+    cabinCount: 2,
+    checkedKg: 32,
+    checkedCount: 2,
+    className: 'Business',
+  },
+  first: {
+    cabinKg: 10,
+    cabinCount: 2,
+    checkedKg: 32,
+    checkedCount: 3,
+    className: 'Première',
+  },
 };
 
 const ITEMS: Item[] = [
@@ -45,43 +81,6 @@ const ITEMS: Item[] = [
   { id: 'passport_wallet', label: 'Passeport + Portefeuille', grams: 150, category: 'Divers', icon: 'wallet' },
 ];
 
-const CABIN_LIMIT_KG = 8;
-const CHECKED_LIMIT_KG = 23;
-
-// Base de données d'objets communs pour l'estimation IA
-const AI_WEIGHT_DATABASE: Record<string, { minGrams: number; maxGrams: number; avgGrams: number }> = {
-  // Vêtements
-  'manteau': { minGrams: 800, maxGrams: 2000, avgGrams: 1200 },
-  'veste': { minGrams: 400, maxGrams: 900, avgGrams: 650 },
-  'pantalon': { minGrams: 400, maxGrams: 800, avgGrams: 600 },
-  'robe': { minGrams: 200, maxGrams: 600, avgGrams: 350 },
-  'pull': { minGrams: 300, maxGrams: 700, avgGrams: 450 },
-  'chemise': { minGrams: 150, maxGrams: 300, avgGrams: 220 },
-  // Tech
-  'ordinateur': { minGrams: 1200, maxGrams: 2500, avgGrams: 1800 },
-  'ipad': { minGrams: 400, maxGrams: 700, avgGrams: 550 },
-  'kindle': { minGrams: 150, maxGrams: 250, avgGrams: 200 },
-  'enceinte': { minGrams: 300, maxGrams: 1500, avgGrams: 600 },
-  'drone': { minGrams: 250, maxGrams: 1500, avgGrams: 800 },
-  // Accessoires
-  'sac à main': { minGrams: 300, maxGrams: 1200, avgGrams: 600 },
-  'trousse': { minGrams: 100, maxGrams: 400, avgGrams: 200 },
-  'parapluie': { minGrams: 200, maxGrams: 500, avgGrams: 350 },
-  'lunettes': { minGrams: 20, maxGrams: 50, avgGrams: 35 },
-  'montre': { minGrams: 50, maxGrams: 200, avgGrams: 100 },
-  'ceinture': { minGrams: 80, maxGrams: 200, avgGrams: 120 },
-  // Autres
-  'jouet': { minGrams: 100, maxGrams: 800, avgGrams: 350 },
-  'peluche': { minGrams: 100, maxGrams: 500, avgGrams: 250 },
-  'bouteille': { minGrams: 400, maxGrams: 1200, avgGrams: 700 },
-  'livre': { minGrams: 200, maxGrams: 800, avgGrams: 400 },
-  'magazine': { minGrams: 100, maxGrams: 300, avgGrams: 180 },
-  'cadeau': { minGrams: 200, maxGrams: 2000, avgGrams: 500 },
-  'souvenirs': { minGrams: 100, maxGrams: 500, avgGrams: 250 },
-  'bijoux': { minGrams: 20, maxGrams: 200, avgGrams: 80 },
-  'medicaments': { minGrams: 50, maxGrams: 300, avgGrams: 150 },
-  'nourriture': { minGrams: 200, maxGrams: 1000, avgGrams: 400 },
-};
 
 const CATEGORY_ICONS: Record<string, keyof typeof MaterialCommunityIcons.glyphMap> = {
   'Vêtements': 'hanger',
@@ -102,12 +101,19 @@ function formatKg(g: number) {
 }
 
 function WeightEstimatorScreenContent() {
+  const { passenger } = usePassenger();
   const [qty, setQty] = useState<Record<string, number>>({});
   const [showAIModal, setShowAIModal] = useState(false);
   const [aiDescription, setAiDescription] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResult, setAiResult] = useState<{ name: string; grams: number; confidence: string } | null>(null);
   const [customItems, setCustomItems] = useState<{ id: string; label: string; grams: number }[]>([]);
+
+  // Obtenir les limites Royal Air Maroc selon la classe du billet
+  const baggageLimits = useMemo(() => {
+    const travelClass = passenger.travelClass || 'economy';
+    return RAM_BAGGAGE_LIMITS[travelClass];
+  }, [passenger.travelClass]);
 
   const grouped = useMemo(() => {
     const cats: Record<string, Item[]> = {};
@@ -134,10 +140,10 @@ function WeightEstimatorScreenContent() {
 
   const verdict = useMemo(() => {
     const kg = totalGrams / 1000;
-    if (kg <= CABIN_LIMIT_KG) return { label: 'OK Cabine', icon: 'check-circle', color: '#10B981', bgColor: 'rgba(16, 185, 129, 0.1)' };
-    if (kg <= CHECKED_LIMIT_KG) return { label: 'Soute uniquement', icon: 'alert-circle', color: '#F59E0B', bgColor: 'rgba(245, 158, 11, 0.1)' };
+    if (kg <= baggageLimits.cabinKg) return { label: 'OK Cabine', icon: 'check-circle', color: '#10B981', bgColor: 'rgba(16, 185, 129, 0.1)' };
+    if (kg <= baggageLimits.checkedKg) return { label: 'Soute uniquement', icon: 'alert-circle', color: '#F59E0B', bgColor: 'rgba(245, 158, 11, 0.1)' };
     return { label: 'Limite dépassée', icon: 'close-circle', color: '#EF4444', bgColor: 'rgba(239, 68, 68, 0.1)' };
-  }, [totalGrams]);
+  }, [totalGrams, baggageLimits]);
 
   const inc = (id: string) => setQty((p) => ({ ...p, [id]: (p[id] ?? 0) + 1 }));
   const dec = (id: string) =>
@@ -152,102 +158,95 @@ function WeightEstimatorScreenContent() {
 
   const itemCount = Object.values(qty).reduce((a, b) => a + b, 0);
 
-  // Fonction d'estimation via API Groq (texte uniquement)
+  // Fonction d'estimation via Smart Logic (Local & Gratuit)
   const estimateWithAI = async () => {
     if (!aiDescription.trim()) {
       Alert.alert('Erreur', 'Veuillez entrer une description de l\'objet.');
       return;
     }
-    
+
     setAiLoading(true);
     Keyboard.dismiss();
-    
+
+    // --- HYBRID MODE: API First > Local Fallback ---
     try {
-      const GROQ_API_KEY = process.env.EXPO_PUBLIC_GROQ_API_KEY;
-      
-      const prompt = `Tu es un expert en estimation de poids d'objets. Estime le poids de l'objet suivant en grammes.\n\nDescription de l'objet: ${aiDescription}\n\nRéponds UNIQUEMENT avec un JSON valide dans ce format exact, sans aucun texte avant ou après:\n{"name": "nom de l'objet", "grams": nombre_en_grammes, "confidence": "Élevée" ou "Moyenne" ou "Faible"}\n\nExemple: {"name": "Sac à main", "grams": 600, "confidence": "Élevée"}`;
-      
+      // 1. Tenter l'appel API (Groq / Llama-3)
+      const API_KEY = process.env.GROQ_API_KEY || '';
+
       const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${API_KEY}`,
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${GROQ_API_KEY}`,
         },
         body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
+          model: "llama-3.3-70b-versatile", // Modèle à jour
           messages: [
             {
-              role: 'system',
-              content: 'Tu es un assistant expert en estimation de poids d\'objets du quotidien. Tu donnes des estimations précises basées sur ta connaissance des objets courants. Réponds uniquement en JSON.'
+              role: "system",
+              content: "Tu es un expert en bagages. Estime le poids en grammes. Réponds SEULEMENT en JSON strict format: {\"name\": \"Nom court normalisé\", \"grams\": number, \"confidence\": \"Élevée\" | \"Moyenne\" }. Si incertain, estime une moyenne. Ne blablate pas."
             },
             {
-              role: 'user',
-              content: prompt
+              role: "user",
+              content: `Estime le poids de : "${aiDescription}".`
             }
           ],
-          temperature: 0.3,
-          max_tokens: 256,
-        }),
+          response_format: { type: "json_object" }
+        })
       });
-      
-      const data = await response.json();
-      
+
       if (!response.ok) {
-        console.error('API Error:', data);
-        throw new Error(data.error?.message || 'Erreur API');
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status} - ${errorText}`);
       }
-      
-      const aiResponse = data.choices?.[0]?.message?.content || '';
-      
-      // Parser la réponse JSON
-      const jsonMatch = aiResponse.match(/\{[^}]+\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
+
+      const data = await response.json();
+      const resultRef = JSON.parse(data.choices[0].message.content);
+
+      setAiResult({
+        name: resultRef.name,
+        grams: resultRef.grams,
+        confidence: (resultRef.confidence || 'Élevée') + " (API)"
+      });
+
+    } catch (error: any) {
+      // 2. Fallback : Moteur Local (Si hors ligne ou erreur API)
+      const result = estimateWeightLocal(aiDescription);
+
+      if (result.found) {
         setAiResult({
-          name: parsed.name || aiDescription || 'Objet',
-          grams: parseInt(parsed.grams) || 300,
-          confidence: parsed.confidence || 'Moyenne',
+          name: result.name,
+          grams: result.grams,
+          confidence: result.confidence + " (Local)"
         });
       } else {
-        // Fallback sur la base locale
-        const searchText = aiDescription.toLowerCase();
-        let bestMatch = { name: aiDescription || 'Objet', grams: 300, confidence: 'Moyenne' };
-        for (const [keyword, dbData] of Object.entries(AI_WEIGHT_DATABASE)) {
-          if (searchText.includes(keyword)) {
-            bestMatch = {
-              name: keyword.charAt(0).toUpperCase() + keyword.slice(1),
-              grams: dbData.avgGrams,
-              confidence: 'Moyenne',
-            };
-            break;
-          }
-        }
-        setAiResult(bestMatch);
+        // Pas trouvé localement + Pas d'API
+        setAiResult({
+          name: aiDescription,
+          grams: 0,
+          confidence: 'Inconnue'
+        });
+
+        // On n'alerte que si c'est vraiment inconnu des deux côtés
+        Alert.alert(
+          'Objet non reconnu',
+          "Je n'ai pas pu estimer cet objet (API indisponible et introuvable en local). Entrez le poids manuellement.",
+          [{ text: 'OK' }]
+        );
       }
-    } catch (error) {
-      console.error('Erreur Groq:', error);
-      // Fallback sur la base de données locale
-      const searchText = (aiDescription || '').toLowerCase();
-      let bestMatch = { name: aiDescription || 'Objet', grams: 300, confidence: 'Moyenne' };
-      for (const [keyword, dbData] of Object.entries(AI_WEIGHT_DATABASE)) {
-        if (searchText.includes(keyword)) {
-          bestMatch = {
-            name: keyword.charAt(0).toUpperCase() + keyword.slice(1),
-            grams: dbData.avgGrams,
-            confidence: 'Moyenne',
-          };
-          break;
-        }
-      }
-      setAiResult(bestMatch);
+    } finally {
+      setAiLoading(false);
     }
-    
-    setAiLoading(false);
   };
 
   // Ajouter l'objet estimé à la liste
   const addAIItem = () => {
     if (aiResult) {
+      if (aiResult.confidence === 'Inconnue' && aiResult.grams === 0) {
+        Alert.alert('Poids manquant', 'Cet objet n\'a pas de poids. Ajoutez-le via le bouton (+) standard pour définir son poids manuellement.');
+        return;
+      }
+
       const newItem = {
         id: `custom_${Date.now()}`,
         label: aiResult.name,
@@ -256,7 +255,12 @@ function WeightEstimatorScreenContent() {
       setCustomItems(prev => [...prev, newItem]);
       setQty(prev => ({ ...prev, [newItem.id]: 1 }));
       resetAIModal();
-      Alert.alert('✅ Ajouté', `"${aiResult.name}" (~${aiResult.grams}g) a été ajouté à votre estimation.`);
+
+      const message = aiResult.confidence === 'Inconnue'
+        ? `"${aiResult.name}" ajouté. Pensez à vérifier son poids.`
+        : `"${aiResult.name}" (~${aiResult.grams}g) a été ajouté à votre estimation.`;
+
+      Alert.alert('✅ Ajouté', message);
     }
   };
 
@@ -287,12 +291,20 @@ function WeightEstimatorScreenContent() {
           </View>
           <View>
             <Text style={styles.headerTitle}>Estimation Poids</Text>
-            <Text style={styles.headerSubtitle}>Calculateur intelligent</Text>
+            <Text style={styles.headerSubtitle}>Classe {baggageLimits.className}</Text>
           </View>
         </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+
+        {/* Travel Class Info */}
+        <View style={styles.classInfoBanner}>
+          <MaterialCommunityIcons name="airplane-check" size={18} color="#B22222" />
+          <Text style={styles.classInfoText}>
+            Votre billet {baggageLimits.className} : {baggageLimits.cabinCount} bagage{baggageLimits.cabinCount > 1 ? 's' : ''} cabine ({baggageLimits.cabinKg}kg) + {baggageLimits.checkedCount} bagage{baggageLimits.checkedCount > 1 ? 's' : ''} soute ({baggageLimits.checkedKg}kg)
+          </Text>
+        </View>
 
         {/* Summary Card */}
         <View style={styles.summaryCard}>
@@ -311,11 +323,11 @@ function WeightEstimatorScreenContent() {
           <View style={styles.summaryRight}>
             <View style={styles.limitRow}>
               <MaterialCommunityIcons name="bag-carry-on" size={14} color="#64748B" />
-              <Text style={styles.limitText}>Cabine: ≤{CABIN_LIMIT_KG} kg</Text>
+              <Text style={styles.limitText}>Cabine: ≤{baggageLimits.cabinKg} kg</Text>
             </View>
             <View style={styles.limitRow}>
               <MaterialCommunityIcons name="bag-suitcase" size={14} color="#64748B" />
-              <Text style={styles.limitText}>Soute: ≤{CHECKED_LIMIT_KG} kg</Text>
+              <Text style={styles.limitText}>Soute: ≤{baggageLimits.checkedKg} kg</Text>
             </View>
             <TouchableOpacity style={styles.resetButton} onPress={reset} activeOpacity={0.85}>
               <MaterialCommunityIcons name="refresh" size={16} color="#fff" />
@@ -466,7 +478,7 @@ function WeightEstimatorScreenContent() {
         onRequestClose={resetAIModal}
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <KeyboardAvoidingView 
+          <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.modalOverlay}
           >
@@ -499,14 +511,29 @@ function WeightEstimatorScreenContent() {
 
                 {/* Résultat */}
                 {aiResult && (
-                  <View style={styles.aiResultCard}>
+                  <View style={[
+                    styles.aiResultCard,
+                    aiResult.confidence === 'Inconnue' && { backgroundColor: '#FEF2F2', borderColor: '#FECACA', borderWidth: 1 }
+                  ]}>
                     <View style={styles.aiResultIcon}>
-                      <MaterialCommunityIcons name="lightbulb-on" size={24} color="#10B981" />
+                      <MaterialCommunityIcons
+                        name={aiResult.confidence === 'Inconnue' ? "help-circle-outline" : "lightbulb-on"}
+                        size={24}
+                        color={aiResult.confidence === 'Inconnue' ? "#EF4444" : "#10B981"}
+                      />
                     </View>
                     <View style={styles.aiResultInfo}>
                       <Text style={styles.aiResultName}>{aiResult.name}</Text>
-                      <Text style={styles.aiResultWeight}>Poids estimé : ~{aiResult.grams}g</Text>
-                      <Text style={styles.aiResultConfidence}>Confiance : {aiResult.confidence}</Text>
+                      {aiResult.confidence === 'Inconnue' ? (
+                        <View>
+                          <Text style={[styles.aiResultWeight, { color: '#EF4444' }]}>Poids introuvable</Text>
+                        </View>
+                      ) : (
+                        <>
+                          <Text style={styles.aiResultWeight}>Poids estimé : ~{aiResult.grams}g</Text>
+                          <Text style={styles.aiResultConfidence}>Confiance : {aiResult.confidence}</Text>
+                        </>
+                      )}
                     </View>
                   </View>
                 )}
@@ -514,7 +541,7 @@ function WeightEstimatorScreenContent() {
                 {/* Boutons */}
                 <View style={styles.modalActions}>
                   {!aiResult ? (
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={[styles.aiActionBtn, aiLoading && styles.aiActionBtnDisabled]}
                       onPress={estimateWithAI}
                       disabled={aiLoading}
@@ -529,7 +556,7 @@ function WeightEstimatorScreenContent() {
                       )}
                     </TouchableOpacity>
                   ) : (
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={[styles.aiActionBtn, { backgroundColor: '#10B981' }]}
                       onPress={addAIItem}
                     >
@@ -597,6 +624,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 32,
+  },
+  classInfoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(178, 34, 34, 0.08)',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(178, 34, 34, 0.15)',
+  },
+  classInfoText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#B22222',
+    lineHeight: 18,
   },
   summaryCard: {
     backgroundColor: '#FFFFFF',

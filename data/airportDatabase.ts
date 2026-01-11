@@ -9,6 +9,19 @@ const seededRandom = (seed: number): number => {
     return x - Math.floor(x);
 };
 
+export const MOROCCAN_AIRPORTS = [
+    { name: 'Casablanca Mohammed V', code: 'CMN', city: 'Casablanca' },
+    { name: 'Marrakech Menara', code: 'RAK', city: 'Marrakech' },
+    { name: 'Agadir Al Massira', code: 'AGA', city: 'Agadir' },
+    { name: 'Tanger Ibn Battouta', code: 'TNG', city: 'Tanger' },
+    { name: 'Fès Saïss', code: 'FEZ', city: 'Fès' },
+    { name: 'Rabat Salé', code: 'RBA', city: 'Rabat' },
+    { name: 'Oujda Angads', code: 'OUD', city: 'Oujda' },
+    { name: 'Nador Al Aroui', code: 'NDR', city: 'Nador' },
+    { name: 'Dakhla', code: 'VIL', city: 'Dakhla' },
+    { name: 'Laâyoune Hassan I', code: 'EUN', city: 'Laâyoune' },
+];
+
 export interface Flight {
     id: string;
     flightNumber: string;
@@ -23,6 +36,11 @@ export interface Flight {
     newGate?: string;
     boardingTime: Date;
     gateCloseTime: Date;
+    departureTime?: string; // Formatted HH:mm
+    arrivalTime?: string;   // Formatted HH:mm
+    origin: string;        // NEW: Ville de départ
+    originCode: string;    // NEW: Code aéroport départ
+    defaultSeat?: string;  // NEW: Siège déterministe
 }
 
 export interface SecurityZone {
@@ -102,6 +120,8 @@ export const generateFlights = (): Flight[] => {
             status: 'scheduled',
             boardingTime: new Date(now.getTime() + (baseOffset - 40) * 60000),
             gateCloseTime: new Date(now.getTime() + (baseOffset - 10) * 60000),
+            origin: 'Casablanca Mohammed V',
+            originCode: 'CMN',
         },
         {
             id: 'fl-2',
@@ -115,6 +135,8 @@ export const generateFlights = (): Flight[] => {
             status: 'boarding',
             boardingTime: new Date(now.getTime() - 15 * 60000),
             gateCloseTime: new Date(now.getTime() + 20 * 60000),
+            origin: 'Casablanca Mohammed V',
+            originCode: 'CMN',
         },
         {
             id: 'fl-3',
@@ -128,6 +150,8 @@ export const generateFlights = (): Flight[] => {
             status: 'scheduled',
             boardingTime: new Date(now.getTime() + 95 * 60000),
             gateCloseTime: new Date(now.getTime() + 125 * 60000),
+            origin: 'Casablanca Mohammed V',
+            originCode: 'CMN',
         },
         {
             id: 'fl-4',
@@ -142,6 +166,8 @@ export const generateFlights = (): Flight[] => {
             delay: 20 + Math.floor(seededRandom(timeSeed + 4) * 15), // Délai variable 20-35 min
             boardingTime: new Date(now.getTime() + 55 * 60000),
             gateCloseTime: new Date(now.getTime() + 85 * 60000),
+            origin: 'Casablanca Mohammed V',
+            originCode: 'CMN',
         },
         {
             id: 'fl-5',
@@ -156,6 +182,8 @@ export const generateFlights = (): Flight[] => {
             status: 'gate-change',
             boardingTime: new Date(now.getTime() + 15 * 60000),
             gateCloseTime: new Date(now.getTime() + 40 * 60000),
+            origin: 'Casablanca Mohammed V',
+            originCode: 'CMN',
         },
         {
             id: 'fl-6',
@@ -169,6 +197,8 @@ export const generateFlights = (): Flight[] => {
             status: 'final-call',
             boardingTime: new Date(now.getTime() - 20 * 60000),
             gateCloseTime: new Date(now.getTime() + 10 * 60000),
+            origin: 'Casablanca Mohammed V',
+            originCode: 'CMN',
         },
     ];
 
@@ -329,7 +359,7 @@ export const formatTimeWithSeconds = (date: Date): string => {
 };
 
 // Génère un vol pour n'importe quel numéro de vol saisi
-export const generateFlightForNumber = (flightNumber: string, knownDestination?: string, knownCode?: string): Flight => {
+export const generateFlightForNumber = (flightNumber: string, knownDestination?: string, knownCode?: string, knownDepartureCode?: string): Flight => {
     const now = getCurrentTime();
     const timeSeed = Math.floor(now.getTime() / 10000);
 
@@ -337,31 +367,147 @@ export const generateFlightForNumber = (flightNumber: string, knownDestination?:
     const flightSeed = flightNumber.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
 
     // Destinations possibles
+    // Destinations possibles (Réseau RAM étendu)
     const destinations = [
+        // MAROC
+        { name: 'Marrakech Menara', code: 'RAK' },
+        { name: 'Agadir Al Massira', code: 'AGA' },
+        { name: 'Tanger Ibn Battouta', code: 'TNG' },
+        { name: 'Fès Saïss', code: 'FEZ' },
+        { name: 'Oujda Angads', code: 'OUD' },
+        { name: 'Nador Al Aroui', code: 'NDR' },
+        { name: 'Laâyoune Hassan I', code: 'EUN' },
+        { name: 'Dakhla', code: 'VIL' },
+        { name: 'Ouarzazate', code: 'OZZ' },
+        { name: 'Al Hoceima', code: 'AHU' },
+
+        // FRANCE
         { name: 'Paris Charles de Gaulle', code: 'CDG' },
+        { name: 'Paris Orly', code: 'ORY' },
+        { name: 'Lyon St-Exupéry', code: 'LYS' },
+        { name: 'Marseille Provence', code: 'MRS' },
+        { name: 'Toulouse Blagnac', code: 'TLS' },
+        { name: 'Bordeaux Mérignac', code: 'BOD' },
+        { name: 'Nantes Atlantique', code: 'NTE' },
+        { name: 'Montpellier', code: 'MPL' },
+
+        // EUROPE
         { name: 'Londres Heathrow', code: 'LHR' },
-        { name: 'New York JFK', code: 'JFK' },
-        { name: 'Dubai International', code: 'DXB' },
-        { name: 'Istanbul', code: 'IST' },
-        { name: 'Madrid Barajas', code: 'MAD' },
+        { name: 'Londres Gatwick', code: 'LGW' },
+        { name: 'Bruxelles Zaventem', code: 'BRU' },
         { name: 'Amsterdam Schiphol', code: 'AMS' },
+        { name: 'Madrid Barajas', code: 'MAD' },
+        { name: 'Barcelone El Prat', code: 'BCN' },
+        { name: 'Malaga', code: 'AGP' },
+        { name: 'Valence', code: 'VLC' },
+        { name: 'Lisbonne', code: 'LIS' },
         { name: 'Rome Fiumicino', code: 'FCO' },
+        { name: 'Milan Malpensa', code: 'MXP' },
+        { name: 'Bologne', code: 'BLQ' },
+        { name: 'Genève Cointrin', code: 'GVA' },
         { name: 'Frankfurt', code: 'FRA' },
-        { name: 'Bruxelles', code: 'BRU' },
+        { name: 'Istanbul', code: 'IST' },
+        { name: 'Zurich', code: 'ZRH' },
+        { name: 'Munich', code: 'MUC' },
+        { name: 'Vienne', code: 'VIE' },
+        { name: 'Prague', code: 'PRG' },
+        { name: 'Copenhague', code: 'CPH' },
+        { name: 'Stockholm', code: 'ARN' },
+
+        // AMÉRIQUE
+        { name: 'New York JFK', code: 'JFK' },
+        { name: 'Washington Dulles', code: 'IAD' },
+        { name: 'Montréal Trudeau', code: 'YUL' },
+        { name: 'Miami', code: 'MIA' },
+        { name: 'Boston', code: 'BOS' },
+        { name: 'São Paulo', code: 'GRU' },
+
+        // AFRIQUE
+        { name: 'Dakar Diass', code: 'DSS' },
+        { name: 'Abidjan', code: 'ABJ' },
+        { name: 'Lagos', code: 'LOS' },
+        { name: 'Accra', code: 'ACC' },
+        { name: 'Tunis Carthage', code: 'TUN' },
+        { name: 'Alger', code: 'ALG' },
+        { name: 'Le Caire', code: 'CAI' },
+        { name: 'Bamako', code: 'BKO' },
+        { name: 'Conakry', code: 'CKY' },
+        { name: 'Libreville', code: 'LBV' },
+        { name: 'Johannesburg', code: 'JNB' },
+        { name: 'Nairobi', code: 'NBO' },
+
+        // MOYEN-ORIENT
+        { name: 'Dubai International', code: 'DXB' },
+        { name: 'Jeddah', code: 'JED' },
+        { name: 'Riyad', code: 'RUH' },
+        { name: 'Doha Hamad', code: 'DOH' },
+        { name: 'Abu Dhabi', code: 'AUH' },
+        { name: 'Beyrouth', code: 'BEY' },
+
+        // ASIE
+        { name: 'Pékin', code: 'PEK' },
+        { name: 'Shanghai', code: 'PVG' },
+        { name: 'Tokyo', code: 'NRT' },
+        { name: 'Singapour', code: 'SIN' },
+        { name: 'Bangkok', code: 'BKK' },
+        { name: 'Mumbai', code: 'BOM' },
     ];
 
     let dest = destinations[flightSeed % destinations.length];
+
+    // Logique de résolution destination
+    // Si on a un vol ATxxx (Royal Air Maroc), on assume départ Casa sauf si spécifié autrement
 
     // Override if known destination provided
     if (knownDestination && knownCode) {
         dest = { name: knownDestination, code: knownCode };
     }
 
+    // Logique de départ - TOUJOURS respecter l'origine fournie par l'utilisateur
+    let origin = { name: 'Casablanca Mohammed V', code: 'CMN' };
+
+    // Si un code de départ est fourni, l'utiliser directement
+    if (knownDepartureCode) {
+        const ORIGIN_NAMES: { [key: string]: string } = {
+            'CMN': 'Casablanca Mohammed V',
+            'RAK': 'Marrakech Menara',
+            'AGA': 'Agadir Al Massira',
+            'TNG': 'Tanger Ibn Battouta',
+            'FEZ': 'Fès Saïss',
+            'OUD': 'Oujda Angads',
+            'NDR': 'Nador Al Aroui',
+            'EUN': 'Laâyoune Hassan I',
+            'VIL': 'Dakhla',
+            'OZZ': 'Ouarzazate',
+            'AHU': 'Al Hoceima',
+            'ERH': 'Errachidia'
+        };
+        origin = { 
+            name: ORIGIN_NAMES[knownDepartureCode] || knownDepartureCode, 
+            code: knownDepartureCode 
+        };
+    }
+
     // Calcul des heures basées sur le vol
     const baseOffset = 50 + (flightSeed % 60); // 50-110 minutes
     const gates = ['A1', 'A5', 'B3', 'B12', 'C4', 'C8', 'D2', 'D10'];
-    const gate = gates[flightSeed % gates.length];
+    let gate = gates[flightSeed % gates.length];
+
+    // OVERRIDE: Cas spéciaux pour cohérence avec le serveur
+    if (flightNumber.toUpperCase() === 'AT408') {
+        gate = 'A5';
+    }
     const terminal = flightSeed % 2 === 0 ? 'T1' : 'T2';
+
+    // NEW: Deterministic Seat Generation
+    let seatRow = (flightSeed % 30) + 1;
+    let seatCol = ['A', 'B', 'C', 'D', 'E', 'F'][flightSeed % 6];
+    let defaultSeat = `${seatRow}${seatCol}`;
+
+    // OVERRIDE: Cas spéciaux pour cohérence avec le serveur
+    if (flightNumber.toUpperCase() === 'AT408') {
+        defaultSeat = '17F';
+    }
 
     // Statuts possibles avec probabilités
     const statusRand = seededRandom(timeSeed + flightSeed);
@@ -381,12 +527,18 @@ export const generateFlightForNumber = (flightNumber: string, knownDestination?:
         newGate = gates[(flightSeed + 3) % gates.length];
     }
 
+    const flightDuration = 120 + (flightSeed % 180); // 2h - 5h
+    const arrivalDate = new Date(now.getTime() + baseOffset * 60000 + flightDuration * 60000);
+
     return {
         id: `fl-${flightNumber}`,
         flightNumber: flightNumber.toUpperCase(),
         airline: 'RAM',
         destination: dest.name,
         destinationCode: dest.code,
+        origin: origin.name,
+        originCode: origin.code,
+        defaultSeat, // Export deterministic seat
         scheduledDeparture: new Date(now.getTime() + baseOffset * 60000),
         gate: gate,
         terminal: terminal,
@@ -395,6 +547,8 @@ export const generateFlightForNumber = (flightNumber: string, knownDestination?:
         newGate: newGate,
         boardingTime: new Date(now.getTime() + (baseOffset - 40) * 60000),
         gateCloseTime: new Date(now.getTime() + (baseOffset - 10) * 60000),
+        departureTime: formatTime(new Date(now.getTime() + baseOffset * 60000)),
+        arrivalTime: formatTime(arrivalDate),
     };
 };
 

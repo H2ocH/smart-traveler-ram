@@ -1,0 +1,41 @@
+{
+  "feature_columns": [
+    "time_spent_current_step",
+    "active_users_in_step",
+    "avg_step_duration",
+    "hour_of_day",
+    "airport_BOD",
+    "airport_CDG",
+    "airport_DXB",
+    "airport_FCO",
+    "airport_FRA",
+    "airport_JFK",
+    "airport_LHR",
+    "airport_LYS",
+    "airport_MAD",
+    "airport_NCE",
+    "airport_ORY",
+    "flight_type_international"
+  ],
+  "flight_type_columns": [
+    "flight_type_international"
+  ],
+  "airport_columns": [
+    "airport_BOD",
+    "airport_CDG",
+    "airport_DXB",
+    "airport_FCO",
+    "airport_FRA",
+    "airport_JFK",
+    "airport_LHR",
+    "airport_LYS",
+    "airport_MAD",
+    "airport_NCE",
+    "airport_ORY"
+  ],
+  "encoding_drop_first": true,
+  "encoding_reference": {
+    "flight_type": "first (alphabetical)",
+    "airport": "first (alphabetical)"
+  }
+}

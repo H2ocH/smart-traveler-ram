@@ -1,26 +1,38 @@
 import BaggageClaimModal from '@/components/BaggageClaimModal';
 import RequireAuth from '@/components/RequireAuth';
 import { useJourney } from '@/context/JourneyContext';
+import { usePassenger } from '@/context/PassengerContext';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    Alert,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    Vibration,
-    View
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  Vibration,
+  View
 } from 'react-native';
 
-import { useLocalSearchParams } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
+import { router, useLocalSearchParams } from 'expo-router';
 // ... previous imports ...
 
 function QRScannerScreenContent() {
-  const { mode } = useLocalSearchParams();
+  const isFocused = useIsFocused();
+  const { mode, returnTo } = useLocalSearchParams();
+
+  const handleSuccessRedirect = () => {
+    if (returnTo && typeof returnTo === 'string') {
+      router.push({ pathname: returnTo as any, params: { scanSuccess: 'true' } });
+    } else {
+      resetScanner();
+    }
+  };
+  const { passenger, setPassenger } = usePassenger();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [scanHistory, setScanHistory] = useState<any[]>([]);
@@ -74,6 +86,7 @@ function QRScannerScreenContent() {
   };
 
   const handleBarCodeScanned = (scanningResult: { data: string }) => {
+
     const now = Date.now();
     const timeSinceLastScan = now - lastScanTimeRef.current;
 
@@ -93,18 +106,37 @@ function QRScannerScreenContent() {
     lastScannedCodeRef.current = scanningResult.data;
     lastScanTimeRef.current = now;
 
-    console.log('QR Code scanné:', scanningResult.data);
+    console.log('Code-barres scanné:', scanningResult.data);
 
     try {
-      const qrData = JSON.parse(scanningResult.data);
-      processQRCode(qrData);
+      const barcodeData = JSON.parse(scanningResult.data);
+      processQRCode(barcodeData);
     } catch (error) {
-      console.log('Erreur parsing QR:', error);
-      Alert.alert(
-        'Format non reconnu',
-        'Le QR code doit être au format JSON.'
-      );
-      resetScanner();
+      // Fallback: accepter "ID|Nom|Vol" ou "ID|Nom" ou juste "ID"
+      const raw = scanningResult.data?.trim();
+      if (raw) {
+        const parts = raw.split('|');
+        const baggageId = parts[0]?.trim();
+        const passengerName = parts[1]?.trim();
+        const flightNumber = parts[2]?.trim();
+        if (baggageId) {
+          processQRCode({ baggageId, passengerName, flightNumber });
+        } else {
+          console.log('Erreur parsing code-barres:', error);
+          Alert.alert(
+            'Format non reconnu',
+            'Le code-barres doit contenir un JSON ou au moins l’ID bagage.'
+          );
+          resetScanner();
+        }
+      } else {
+        console.log('Erreur parsing code-barres:', error);
+        Alert.alert(
+          'Format non reconnu',
+          'Le code-barres doit contenir un JSON ou au moins l’ID bagage.'
+        );
+        resetScanner();
+      }
     }
 
     scanTimeoutRef.current = setTimeout(() => {
@@ -113,15 +145,6 @@ function QRScannerScreenContent() {
   };
 
   const processQRCode = (qrData: any) => {
-    const scanRecord = {
-      id: Date.now().toString(),
-      type: currentMode,
-      data: qrData,
-      timestamp: new Date().toLocaleString('fr-FR'),
-    };
-
-    setScanHistory(prev => [scanRecord, ...prev.slice(0, 9)]);
-
     if (currentMode === 'checkin') {
       handleCheckInScan(qrData);
     } else {
@@ -133,7 +156,8 @@ function QRScannerScreenContent() {
     const baggageId = data.baggageId;
 
     if (!baggageId) {
-      Alert.alert('QR invalide', 'ID de bagage manquant dans le QR code.');
+      Alert.alert('Code-barres invalide', 'ID de bagage manquant dans le code-barres.');
+
       resetScanner();
       return;
     }
@@ -160,15 +184,31 @@ function QRScannerScreenContent() {
 
     setBaggages(prev => [...prev, newBaggage]);
 
+    // Ajouter à l'historique seulement si valide
+    const scanRecord = {
+      id: Date.now().toString(),
+      type: 'checkin',
+      data: data,
+      timestamp: new Date().toLocaleString('fr-FR'),
+    };
+    setScanHistory(prev => [scanRecord, ...prev.slice(0, 9)]);
+
+    // 1. Gagner des "Mays" (Monnaie virtuelle app)
     await earnMays(10);
+
+    // 2. Gagner des VRAIS Miles Safar Flyer (Fidélité)
+    const milesReward = 50; // 50 miles par bagage
+    setPassenger({
+      totalMilesEarned: (passenger.totalMilesEarned || 0) + milesReward
+    });
 
     // Valider l'étape bagages dans le Smart Guide
     completeStepByQR('baggage');
 
     Alert.alert(
       'Check-in Réussi',
-      `Bagage ${newBaggage.id} enregistré pour ${newBaggage.passengerName}\n\n+10 Mays!\n\nÉtape "Bagages" validée!`,
-      [{ text: 'OK', onPress: resetScanner }]
+      `Bagage ${newBaggage.id} enregistré pour ${newBaggage.passengerName}\n\n🎉 +${milesReward} Miles Safar Flyer crédités !\n\nÉtape "Bagages" validée!`,
+      [{ text: 'Super !', onPress: handleSuccessRedirect }]
     );
   };
 
@@ -176,7 +216,8 @@ function QRScannerScreenContent() {
     const baggageId = data.baggageId;
 
     if (!baggageId) {
-      Alert.alert('QR invalide', 'ID de bagage manquant dans le QR code.');
+      Alert.alert('Code-barres invalide', 'ID de bagage manquant.');
+
       resetScanner();
       return;
     }
@@ -217,12 +258,21 @@ function QRScannerScreenContent() {
 
       setBaggages(updatedBaggages);
 
+      // Ajouter à l'historique seulement si valide
+      const scanRecord = {
+        id: Date.now().toString(),
+        type: 'checkout',
+        data: data,
+        timestamp: new Date().toLocaleString('fr-FR'),
+      };
+      setScanHistory(prev => [scanRecord, ...prev.slice(0, 9)]);
+
       await earnMays(15);
 
       Alert.alert(
         'Check-out Réussi',
         `Bagage ${baggageId} validé pour ${baggage.passengerName}\n\nLes données correspondent\n\n+15 Mays!`,
-        [{ text: 'OK', onPress: resetScanner }]
+        [{ text: 'OK', onPress: handleSuccessRedirect }]
       );
     } else {
       Alert.alert(
@@ -382,8 +432,8 @@ function QRScannerScreenContent() {
         </Text>
         <Text style={styles.modeDescription}>
           {currentMode === 'checkin'
-            ? 'Scannez le QR code pour enregistrer un nouveau bagage'
-            : 'Scannez le QR code pour vérifier et valider la récupération'}
+            ? 'Scannez le code-barres pour enregistrer un nouveau bagage'
+            : 'Scannez le code-barres pour vérifier et valider la récupération'}
         </Text>
       </View>
 
@@ -451,20 +501,31 @@ function QRScannerScreenContent() {
 
       {/* Caméra */}
       <View style={styles.cameraContainer}>
-        <CameraView
-          style={styles.camera}
-          facing="back"
-          onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
-          barcodeScannerSettings={{
-            barcodeTypes: ['qr'],
-          }}
-        />
+        {isFocused && (
+          <CameraView
+            style={styles.camera}
+            facing="back"
+            onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+            barcodeScannerSettings={{
+             // Codes-barres (QR non requis)
+             barcodeTypes: [
+               'code128',
+               'code39',
+               'codabar',
+               'ean13',
+               'ean8',
+               'upc_a',
+               'upc_e',
+             ],
+            }}
+          />
+        )}
         <View style={styles.scanFrame}>
           <Text style={styles.scanText}>
-            {scanned ? 'Code scanné' : 'Scanner le QR code'}
+            {scanned ? 'Code scanné' : 'Scannez le code-barres bagage'}
           </Text>
           <Text style={styles.scanSubtext}>
-            {scanned ? 'Traitement en cours...' : 'Placez le code dans le cadre'}
+            {scanned ? 'Traitement en cours...' : 'Placez le code-barres dans le cadre'}
           </Text>
         </View>
       </View>

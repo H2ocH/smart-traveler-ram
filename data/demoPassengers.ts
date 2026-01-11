@@ -5,6 +5,7 @@ export type DemoPassenger = {
   destinationCode: string;
   seatNumber: string;
   loyaltyTier: 'standard' | 'silver' | 'gold' | 'platinum';
+  travelClass: 'economy' | 'business' | 'first';
   hasCheckedBag: boolean;
 };
 
@@ -16,6 +17,7 @@ export const DEMO_PASSENGERS: DemoPassenger[] = [
     destinationCode: 'CDG',
     seatNumber: '12A',
     loyaltyTier: 'gold',
+    travelClass: 'business',
     hasCheckedBag: true,
   },
   {
@@ -25,6 +27,7 @@ export const DEMO_PASSENGERS: DemoPassenger[] = [
     destinationCode: 'LHR',
     seatNumber: '18C',
     loyaltyTier: 'silver',
+    travelClass: 'economy',
     hasCheckedBag: false,
   },
   {
@@ -34,6 +37,7 @@ export const DEMO_PASSENGERS: DemoPassenger[] = [
     destinationCode: 'DXB',
     seatNumber: '3F',
     loyaltyTier: 'platinum',
+    travelClass: 'first',
     hasCheckedBag: true,
   },
 ];

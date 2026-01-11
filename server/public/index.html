@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Traveler Dashboard - Matrice</title>
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --accent: #3b82f6;
+            --success: #22c55e;
+            --warning: #f59e0b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding: 16px;
+            background: var(--bg-card);
+            border-radius: 12px;
+            border: 1px solid #334155;
+        }
+
+        .header h1 {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .refresh-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        /* MATRIX TABLE STYLES */
+        .matrix-container {
+            overflow-x: auto;
+            background: var(--bg-card);
+            border-radius: 12px;
+            border: 1px solid #334155;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
+        th,
+        td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid #334155;
+        }
+
+        th {
+            background: #0f172a;
+            color: var(--text-secondary);
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        /* Colonnes fixes à gauche */
+        .col-fixed {
+            position: sticky;
+            left: 0;
+            background: var(--bg-card);
+            z-index: 5;
+            border-right: 2px solid #334155;
+        }
+
+        th.col-fixed {
+            z-index: 15;
+            background: #0f172a;
+        }
+
+        /* Cellules de temps */
+        .cell-time {
+            color: var(--text-secondary);
+        }
+
+        .cell-in {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--warning);
+            font-weight: 700;
+            text-align: center;
+            border: 1px dashed var(--warning);
+        }
+
+        .cell-done {
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        /* Badges */
+        .badge {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            background: #334155;
+            color: #cbd5e1;
+        }
+
+        .flight-info {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .user-id {
+            font-family: monospace;
+            color: var(--accent);
+        }
+    </style>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        /* Previous styles... */
+
+        /* Demo Panel */
+        .demo-panel {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px dashed #475569;
+            padding: 16px;
+            border-radius: 12px;
+            margin-top: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .btn-demo {
+            background: #8b5cf6;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-demo:hover {
+            background: #7c3aed;
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <div>
+            <h1>Suivi Voyageurs (Temps Réel)</h1>
+            <small style="color: #94a3b8">Vue Matrice • <span id="userCount">0</span> passagers suivis</small>
+        </div>
+        <button class="refresh-btn" onclick="loadData()">Actualiser</button>
+    </div>
+
+    <!-- Demo Controls (Moved to Top) -->
+    <div class="demo-panel" style="margin-top: 0; margin-bottom: 24px;">
+        <div>
+            <h3 style="font-size:14px; margin-bottom:4px; color:#cbd5e1">🛠️ Outils de Démo</h3>
+            <p style="font-size:12px; color:#94a3b8">Utilisez ces outils pour simuler de l'activité si vous n'avez pas
+                l'application mobile.</p>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center">
+            <span id="connectionStatus" class="badge" style="background:#334155">Non connecté</span>
+            <button class="btn-demo" onclick="injectData()">+ Générer 50 Passagers</button>
+            <button class="btn-demo" style="background:#ef4444" onclick="clearData()">Supprimer Tout</button>
+        </div>
+    </div>
+
+    <div class="matrix-container">
+        <table>
+            <thead>
+                <tr>
+                    <!-- Infos Voyageur (Fixes) -->
+                    <th class="col-fixed">Passager</th>
+                    <th>Début Parcours</th> <!-- NEW -->
+                    <th>Vol</th>
+                    <th>Siège</th>
+                    <th>Porte</th>
+
+                    <!-- NEW COLUMNS -->
+                    <th>Dép.</th>
+                    <th>Aéroport Départ</th>
+                    <th>H. Décollage</th>
+
+                    <th>Arr.</th>
+                    <th>Aéroport Arrivée</th>
+                    <th>H. Atterrissage</th>
+
+                    <!-- 9 ÉTAPES (Colonnes dynamiques) -->
+                    <th style="border-left: 2px solid #475569">1. Entrée</th>
+                    <th>2. Enreg.</th>
+                    <th>3. Sécurité</th>
+                    <th>4. Passeport</th>
+                    <th>5. Duty Free</th>
+                    <th>6. Porte</th>
+                    <th style="border-left: 2px solid #475569">7. Vol</th>
+                    <th>8. Bagages</th>
+                    <th>9. Sortie</th>
+                </tr>
+            </thead>
+            <tbody id="matrixBody">
+                <tr>
+                    <td colspan="19" style="text-align:center; padding: 40px;">Chargement des données...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+
+
+    <script>
+        function formatDuration(seconds) {
+            if (seconds === undefined || seconds === null) return '';
+            if (seconds === 0) return '0s'; // Explicitly show 0s
+            if (seconds < 60) return seconds + 's';
+            const mins = Math.floor(seconds / 60);
+            return `${mins}m`;
+        }
+
+        function formatTime(isoString) {
+            if (!isoString) return '-';
+            // If already formatted as HH:mm or HH:mm:ss (short string), return as is
+            if (isoString.length <= 8 && isoString.includes(':')) return isoString;
+
+            const d = new Date(isoString);
+            if (isNaN(d.getTime())) return isoString; // Fallback if invalid date
+
+            return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function formatDateTime(isoString) {
+            if (!isoString) return '-';
+            const d = new Date(isoString);
+            return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }) + ' ' +
+                d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function renderData(records) {
+            try {
+                // const res = await fetch('/api/dataset');
+                // const data = await res.json();
+                // const records = data.dataset || [];
+
+                // 1. Grouper par Voyageur (Pivot)
+                const travelers = {};
+
+                records.forEach(r => {
+                    // Fallback si travelerId n'existe pas (anciennes données)
+                    const tid = r.travelerId || 'unknown_' + r.id;
+
+                    if (!travelers[tid]) {
+                        travelers[tid] = {
+                            id: tid,
+                            flight: r.flightId || '-',
+                            seat: r.seat || '-',
+                            gate: r.gate || '-',
+
+                            // New Fields
+                            depCode: r.depAirport || 'CMN',
+                            depName: r.depAirportName || 'Mohammed V',
+                            depTime: r.departureTime,
+
+                            arrCode: r.arrAirport || '-',
+                            arrName: r.arrAirportName || '-',
+                            arrTime: r.arrivalTime,
+
+                            startTime: r.timestamp,
+                            steps: {}
+                        };
+                    } else {
+                        // ENRICHISSEMENT: Si on a déjà vu le traveler mais que le record actuel a des infos, on met à jour
+                        // On écrase les tirets '-' ou les données vides
+                        if (r.flightId && (!travelers[tid].flight || travelers[tid].flight === '-')) travelers[tid].flight = r.flightId;
+                        if (r.seat && (!travelers[tid].seat || travelers[tid].seat === '-')) travelers[tid].seat = r.seat;
+                        if (r.gate && (!travelers[tid].gate || travelers[tid].gate === '-')) travelers[tid].gate = r.gate;
+
+                        if (r.depAirport && (!travelers[tid].depCode || travelers[tid].depCode === 'CMN')) travelers[tid].depCode = r.depAirport;
+                        if (r.depAirportName && (!travelers[tid].depName || travelers[tid].depName === 'Mohammed V')) travelers[tid].depName = r.depAirportName;
+                        if (r.departureTime) travelers[tid].depTime = r.departureTime;
+
+                        if (r.arrAirport && (!travelers[tid].arrCode || travelers[tid].arrCode === '-')) travelers[tid].arrCode = r.arrAirport;
+                        if (r.arrAirportName && (!travelers[tid].arrName || travelers[tid].arrName === '-')) travelers[tid].arrName = r.arrAirportName;
+                        if (r.arrivalTime) travelers[tid].arrTime = r.arrivalTime;
+                    }
+
+                    // Keep earliest timestamp found as "Journey Start"
+                    if (new Date(r.timestamp) < new Date(travelers[tid].startTime)) {
+                        travelers[tid].startTime = r.timestamp;
+                    }
+
+                    // Stocker le temps pour l'étape spécifique
+                    // Mapping des noms techniques vers index 1-9
+                    const stepMapping = {
+                        'entrance': 1, 'checkin': 2, 'security': 3, 'passport': 4,
+                        'duty_free': 5, 'gate': 6, 'arrival': 7,
+                        'baggage_claim': 8, 'exit': 9
+                    };
+
+                    // On map 'stepFrom' pour savoir où il a passé du temps
+                    // Sauf pour 'arrival' -> 'baggage', c'est le temps de vol
+                    // Le stepFrom='exit' mapping vers col 9 permet d'afficher la durée de sortie.
+
+                    let stepIndex = stepMapping[r.stepFrom];
+
+                    if (stepIndex) {
+                        travelers[tid].steps[stepIndex] = {
+                            duration: r.durationSeconds,
+                            status: r.stepStatus || (r.isSimulated ? 'completed' : 'unknown'),
+                            timestamp: r.timestamp // Store timestamp for dynamic calc
+                        };
+                    }
+
+                    // Gestion spéciale: si "IN", c'est l'étape actuelle
+                    if (r.stepStatus === 'in_progress') {
+                        // C'est l'étape 'stepFrom' qui est en cours
+                        travelers[tid].steps[stepIndex].status = 'in_progress';
+                    }
+                });
+
+                // 2. Trier par date de début (le plus récent en haut)
+                const sortedTravelers = Object.values(travelers).sort((a, b) =>
+                    new Date(b.startTime) - new Date(a.startTime)
+                );
+
+                document.getElementById('userCount').textContent = sortedTravelers.length;
+
+                // 3. Rendu HTML
+                const tbody = document.getElementById('matrixBody');
+
+                if (sortedTravelers.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="19" style="text-align:center; padding: 40px;">Aucun voyageur détecté. Lancez une simulation !</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = sortedTravelers.map(t => {
+                    // Sauf si c'est un "vieux" record sans ID propre, on l'affiche différemment ?
+                    // Non, on affiche tout.
+
+                    let rowHtml = `
+                        <tr>
+                            <td class="col-fixed">
+                                ${(() => {
+                            // t.id format: user_name_session OR user_name
+                            const parts = t.id.split('_');
+                            // Si on a au moins 3 parties (user, name, session), on prend name + session
+                            if (parts.length >= 3) {
+                                const session = parts.pop();
+                                const name = parts[1];
+                                return `<span class="user-id" style="color:#fff">${name}</span> <span style="color:#64748B; font-size:10px">#${session.substr(0, 4)}</span>`;
+                            }
+                            // Sinon fallback old behavior
+                            return `<span class="user-id">#${parts.pop()}</span>`;
+                        })()}
+                            </td>
+                            <td style="color:#e2e8f0; font-weight:600">${formatDateTime(t.startTime)}</td>
+                            <td><span class="badge">${t.flight}</span></td>
+                            <td>${t.seat}</td>
+                            <td>${t.gate}</td>
+                            
+                            <!-- New Cols -->
+                            <td style="font-weight:bold; color:#e2e8f0">${t.depCode || 'CMN'}</td>
+                            <td style="color:#94a3b8; font-size:12px">${t.depName || '-'}</td>
+                            <td style="color:#fbbf24; font-weight:600">${formatTime(t.depTime)}</td>
+                            
+                            <td style="font-weight:bold; color:#e2e8f0">${t.arrCode || '-'}</td>
+                            <td style="color:#94a3b8; font-size:12px">${t.arrName || '-'}</td>
+                            <td style="color:#fbbf24; font-weight:600">${formatTime(t.arrTime)}</td>
+                    `;
+
+                    // Colonnes 1 à 9
+                    for (let i = 1; i <= 9; i++) {
+                        const step = t.steps[i];
+                        if (!step) {
+                            rowHtml += `<td></td>`; // Vide
+                        } else if (step.status === 'in_progress') {
+                            // Calculate dynamic duration if currently running
+                            const elapsed = step.timestamp ? Math.floor((new Date() - new Date(step.timestamp)) / 1000) : 0;
+                            rowHtml += `<td class="cell-in">IN (${formatDuration(elapsed)})</td>`;
+                        } else {
+                            rowHtml += `<td class="cell-done">${formatDuration(step.duration)}</td>`;
+                        }
+                    }
+
+                    rowHtml += `</tr>`;
+                    return rowHtml;
+                }).join('');
+
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // --- REAL-TIME & DEMO LOGIC ---
+        const socket = io();
+
+        socket.on('connect', () => {
+            console.log('Connected to server via WebSocket');
+            const badge = document.getElementById('connectionStatus');
+            if (badge) {
+                badge.textContent = 'Mise à jour TR';
+                badge.style.background = '#22c55e'; // Green
+            }
+        });
+
+        socket.on('disconnect', () => {
+            const badge = document.getElementById('connectionStatus');
+            if (badge) {
+                badge.textContent = 'Déconnecté';
+                badge.style.background = '#ef4444'; // Red
+            }
+        });
+
+        // Receiving updates from server (Push)
+        socket.on('dataset-updated', (data) => {
+            renderData(data.dataset);
+            // Update active users count if available
+            // document.getElementById('activeUsers').textContent = data.activeUsers; 
+        });
+
+        // Demo Actions
+        function injectData() {
+            socket.emit('inject-records', 50);
+        }
+
+        function clearData() {
+            if (confirm('Voulez-vous vraiment effacer tout le dataset ?')) {
+                fetch('/api/dataset', { method: 'DELETE' });
+            }
+        }
+
+        // Initial fetch fallback (optional, but socket connects fast)
+        fetch('/api/dataset').then(res => res.json()).then(data => renderData(data.dataset));
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,9 @@
+step=1	model=weibull	c_index=0.3831	log_lik=-922.91	n=481
+step=2	model=weibull	c_index=0.3494	log_lik=-1018.14	n=397
+step=3	model=weibull	c_index=0.3865	log_lik=-1622.32	n=557
+step=4	model=weibull	c_index=0.2442	log_lik=-620.69	n=304
+step=5	model=weibull	c_index=0.3995	log_lik=-1133.21	n=393
+step=6	model=weibull	c_index=0.3739	log_lik=-1201.86	n=387
+step=7	model=weibull	c_index=0.2241	log_lik=-1023.92	n=209
+step=8	model=weibull	c_index=0.3185	log_lik=-465.61	n=153
+step=9	model=weibull	c_index=0.3522	log_lik=-251.21	n=119

@@ -1,5 +1,5 @@
 import RequireAuth from '@/components/RequireAuth';
-import { formatTimeWithSeconds, getCurrentTime, getWeatherConditions } from '@/data/airportDatabase';
+import { getCurrentTime, getWeatherConditions } from '@/data/airportDatabase';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -54,11 +54,7 @@ export default function ExploreScreen() {
           <View style={styles.headerContent}>
             <View>
               <Text style={styles.headerTitle}>Services</Text>
-              <Text style={styles.headerSubtitle}>Votre confort à l’aéroport</Text>
-            </View>
-            <View style={styles.clockBadge}>
-              <View style={styles.clockDot} />
-              <Text style={styles.clockText}>{formatTimeWithSeconds(currentTime)}</Text>
+              <Text style={styles.headerSubtitle}>Votre confort à l'aéroport</Text>
             </View>
           </View>
         </View>
@@ -107,8 +103,8 @@ export default function ExploreScreen() {
               key={shop.id}
               style={styles.loungeCard}
             >
-              <TouchableOpacity 
-                activeOpacity={0.9} 
+              <TouchableOpacity
+                activeOpacity={0.9}
                 style={styles.loungeInner}
                 onPress={() => router.push({ pathname: '/(tabs)/shop', params: { shopId: shop.id } })}
               >
@@ -136,8 +132,8 @@ export default function ExploreScreen() {
                 <View style={styles.featuredImagesRow}>
                   {shop.featuredImages.map((img, idx) => (
                     <View key={idx} style={styles.featuredImageWrapper}>
-                      <Image 
-                        source={{ uri: img }} 
+                      <Image
+                        source={{ uri: img }}
                         style={styles.featuredImage}
                         resizeMode="cover"
                       />
@@ -162,6 +158,7 @@ export default function ExploreScreen() {
               </TouchableOpacity>
             </View>
           ))}
+
 
           {/* Services Grid */}
           <View style={styles.sectionHeader}>
@@ -293,22 +290,22 @@ export default function ExploreScreen() {
               {/* FAQ Section */}
               <View style={styles.faqSection}>
                 <Text style={styles.faqTitle}>Questions fréquentes</Text>
-                
+
                 <View style={styles.faqItem}>
                   <MaterialCommunityIcons name="help-circle-outline" size={18} color="#64748B" />
                   <Text style={styles.faqText}>Comment modifier ma réservation ?</Text>
                 </View>
-                
+
                 <View style={styles.faqItem}>
                   <MaterialCommunityIcons name="help-circle-outline" size={18} color="#64748B" />
                   <Text style={styles.faqText}>Où récupérer mes bagages ?</Text>
                 </View>
-                
+
                 <View style={styles.faqItem}>
                   <MaterialCommunityIcons name="help-circle-outline" size={18} color="#64748B" />
                   <Text style={styles.faqText}>Comment enregistrer en ligne ?</Text>
                 </View>
-                
+
                 <View style={styles.faqItem}>
                   <MaterialCommunityIcons name="help-circle-outline" size={18} color="#64748B" />
                   <Text style={styles.faqText}>Quels sont les horaires des vols ?</Text>
@@ -383,29 +380,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#64748B',
     marginTop: 2,
-  },
-  clockBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#F8FAFC',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#E8ECF0',
-  },
-  clockDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#10B981',
-  },
-  clockText: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#1E293B',
-    fontVariant: ['tabular-nums'],
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -907,5 +881,41 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#10B981',
+  },
+  guideCard: {
+    backgroundColor: '#B22222',
+    borderRadius: 20,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginBottom: 24,
+    shadowColor: '#B22222',
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
+  },
+  guideIconBox: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  guideInfo: {
+    flex: 1,
+  },
+  guideName: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#fff',
+  },
+  guideDesc: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 2,
   },
 });

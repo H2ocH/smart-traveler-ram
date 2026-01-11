@@ -28,26 +28,7 @@ export default function TabLayout() {
           },
         }}
       >
-        <Tabs.Screen
-          name="home"
-          options={{
-            title: 'Accueil',
-            tabBarIcon: ({ color }) => (
-              <IconSymbol size={26} name="house.fill" color={color} />
-            ),
-          }}
-        />
-
-        <Tabs.Screen
-          name="scan"
-          options={{
-            title: 'Scanner',
-            tabBarIcon: ({ color }) => (
-              <IconSymbol size={26} name="qrcode" color={color} />
-            ),
-          }}
-        />
-
+        {/* Ordre chronologique avant vol : Mesure, Poids, Accueil, Scanner, Plus */}
         <Tabs.Screen
           name="measure"
           options={{
@@ -64,6 +45,26 @@ export default function TabLayout() {
             title: 'Poids',
             tabBarIcon: ({ color }) => (
               <IconSymbol size={26} name="scalemass.fill" color={color} />
+            ),
+          }}
+        />
+
+        <Tabs.Screen
+          name="home"
+          options={{
+            title: 'Accueil',
+            tabBarIcon: ({ color }) => (
+              <IconSymbol size={26} name="house.fill" color={color} />
+            ),
+          }}
+        />
+
+        <Tabs.Screen
+          name="scan"
+          options={{
+            title: 'Scanner',
+            tabBarIcon: ({ color }) => (
+              <IconSymbol size={26} name="qrcode" color={color} />
             ),
           }}
         />

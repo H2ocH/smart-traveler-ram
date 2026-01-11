@@ -14,9 +14,15 @@ interface PassengerData {
     flightNumber: string;
     passengerName: string;
     seatNumber: string;
+    gate?: string; // NEW: Porte d'embarquement
+    depAirport?: string; // NEW: Code aéroport départ (ex: CMN, CDG)
+    depAirportName?: string; // NEW: Nom complet aéroport départ
+    departureTime?: string; // NEW: Heure de départ (ISO)
+    arrivalTime?: string; // NEW: Heure d'arrivée (ISO)
     destination?: string;
     destinationCode?: string;
     loyaltyTier: 'standard' | 'silver' | 'gold' | 'platinum';
+    travelClass: 'economy' | 'business' | 'first';
     hasCheckedBag: boolean;
     isLoggedIn: boolean;
     // Données de fidélité
@@ -36,7 +42,13 @@ const defaultPassenger: PassengerData = {
     flightNumber: '',
     passengerName: '',
     seatNumber: '',
+    gate: '',
+    depAirport: 'CMN', // Default: Mohammed V
+    depAirportName: 'Mohammed V',
+    departureTime: '',
+    arrivalTime: '',
     loyaltyTier: 'standard',
+    travelClass: 'economy',
     hasCheckedBag: false,
     isLoggedIn: false,
     totalMilesEarned: 0,

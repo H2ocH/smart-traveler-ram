@@ -1,4 +1,6 @@
+import { useCrowd } from '@/context/CrowdContext';
 import { useJourney } from '@/context/JourneyContext';
+import { usePassenger } from '@/context/PassengerContext';
 import {
     Flight,
     formatTimeRemaining,
@@ -45,6 +47,11 @@ export default function SmartAssistantModal({ visible, onClose, flightNumber, lo
     // isCrowdSimulated removed
 
     const { advanceStep, navStepIndex: currentNavStep, setNavStepIndex: setCurrentNavStep } = useJourney();
+    const { submitTime } = useCrowd();
+    const { passenger, setPassenger } = usePassenger();
+
+    // Track when each step started (for crowdsourced timing)
+    const [stepStartTime, setStepStartTime] = useState<Date>(new Date());
 
     const isVIP = loyaltyTier === 'gold' || loyaltyTier === 'platinum';
 
@@ -70,6 +77,19 @@ export default function SmartAssistantModal({ visible, onClose, flightNumber, lo
             // setCurrentNavStep(0); // REMOVED to persist progress
             setShowBaggageScan(false);
             setBaggageValidated(false);
+
+            // SYNC TO GLOBAL CONTEXT FOR DASHBOARD
+            setPassenger({
+                flightNumber: flight.flightNumber,
+                gate: flight.newGate || flight.gate,
+                destination: flight.destination,
+                destinationCode: flight.destinationCode || 'JFK',
+                depAirport: 'CMN',
+                depAirportName: 'Mohammed V',
+                departureTime: flight.departureTime,
+                arrivalTime: flight.arrivalTime,
+                loyaltyTier: isVIP ? 'gold' : 'standard',
+            });
         }
     }, [visible, flightNumber, isVIP, destination, destinationCode]);
 
@@ -83,6 +103,7 @@ export default function SmartAssistantModal({ visible, onClose, flightNumber, lo
         if (!selectedRoute) return;
 
         const navStep = selectedRoute.route.steps[currentNavStep];
+        const nextNavStep = selectedRoute.route.steps[currentNavStep + 1];
 
         // Check if at baggage step
         if (navStep.zoneId.includes('checkin') && !baggageValidated) {
@@ -90,13 +111,32 @@ export default function SmartAssistantModal({ visible, onClose, flightNumber, lo
             return;
         }
 
+        // Calculate time spent on this step and submit to dashboard
+        const durationSeconds = Math.round((new Date().getTime() - stepStartTime.getTime()) / 1000);
+        if (durationSeconds > 0 && nextNavStep) {
+            // Inclure les infos passager depuis les props et le contexte
+            submitTime(navStep.zoneId, nextNavStep.zoneId, durationSeconds, {
+                travelerId: passenger.passengerName ? `user_${passenger.passengerName.replace(/\s/g, '_').toLowerCase()}` : undefined,
+                flightId: flightNumber || undefined,
+                seat: passenger.seatNumber || undefined,
+                gate: passenger.gate || myFlight?.gate || undefined,
+                depAirport: passenger.depAirport || 'CMN',
+                depAirportName: passenger.depAirportName || 'Mohammed V',
+                arrAirport: destinationCode || undefined,
+                arrAirportName: destination || myFlight?.destination || undefined,
+                passengerName: passenger.passengerName || undefined,
+            });
+            console.log(`[CrowdData] Submitted: ${navStep.zoneId} -> ${nextNavStep.zoneId} = ${durationSeconds}s`);
+        }
+
         if (currentNavStep < selectedRoute.route.steps.length - 1) {
             setCurrentNavStep(prev => prev + 1);
+            setStepStartTime(new Date()); // Reset timer for next step
             if (navStep.zoneId.includes('security')) advanceStep();
             if (navStep.zoneId.includes('passport')) advanceStep();
             if (navStep.zoneId.includes('gate')) advanceStep();
         }
-    }, [routeOptions, selectedRouteIndex, currentNavStep, advanceStep, baggageValidated]);
+    }, [routeOptions, selectedRouteIndex, currentNavStep, advanceStep, baggageValidated, stepStartTime, submitTime]);
 
     const handleScanBaggage = (isCheckout: boolean = false) => {
         // Simulate QR scan
