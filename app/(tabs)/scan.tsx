@@ -194,20 +194,15 @@ function QRScannerScreenContent() {
     setScanHistory(prev => [scanRecord, ...prev.slice(0, 9)]);
 
     // 1. Gagner des "Mays" (Monnaie virtuelle app)
-    await earnMays(10);
-
-    // 2. Gagner des VRAIS Miles Safar Flyer (Fidélité)
-    const milesReward = 50; // 50 miles par bagage
-    setPassenger({
-      totalMilesEarned: (passenger.totalMilesEarned || 0) + milesReward
-    });
+    const maysReward = 10; // 10 Mays par bagage
+    earnMays(maysReward);
 
     // Valider l'étape bagages dans le Smart Guide
     completeStepByQR('baggage');
 
     Alert.alert(
       'Check-in Réussi',
-      `Bagage ${newBaggage.id} enregistré pour ${newBaggage.passengerName}\n\n🎉 +${milesReward} Miles Safar Flyer crédités !\n\nÉtape "Bagages" validée!`,
+      `Bagage ${newBaggage.id} enregistré pour ${newBaggage.passengerName}\n\nÉtape "Bagages" validée!`,
       [{ text: 'Super !', onPress: handleSuccessRedirect }]
     );
   };
@@ -266,12 +261,10 @@ function QRScannerScreenContent() {
         timestamp: new Date().toLocaleString('fr-FR'),
       };
       setScanHistory(prev => [scanRecord, ...prev.slice(0, 9)]);
-
-      await earnMays(15);
-
+      
       Alert.alert(
         'Check-out Réussi',
-        `Bagage ${baggageId} validé pour ${baggage.passengerName}\n\nLes données correspondent\n\n+15 Mays!`,
+        `Bagage ${baggageId} validé pour ${baggage.passengerName}`,
         [{ text: 'OK', onPress: handleSuccessRedirect }]
       );
     } else {

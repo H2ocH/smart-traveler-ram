@@ -1,5 +1,6 @@
 import RequireAuth from '@/components/RequireAuth';
 import { usePassenger } from '@/context/PassengerContext';
+import { estimateWeightLocal } from '@/utils/smartMatching';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Keyboard, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
@@ -201,6 +202,11 @@ function WeightEstimatorScreenContent() {
       }
 
       const data = await response.json();
+      
+      if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+        throw new Error('Réponse API invalide');
+      }
+      
       const resultRef = JSON.parse(data.choices[0].message.content);
 
       setAiResult({

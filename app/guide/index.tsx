@@ -35,7 +35,7 @@ export default function SmartGuideScreen() {
         flightTraffic
     } = useCrowd();
 
-    const { passenger, logout, setPassenger } = usePassenger();
+    const { passenger, logout, setPassenger, startNewJourney, completeCurrentJourney } = usePassenger();
     const router = useRouter();
     const params = useLocalSearchParams();
 
@@ -58,11 +58,33 @@ export default function SmartGuideScreen() {
     const [scanValidated, setScanValidated] = useState(false);
     const [isFinished, setIsFinished] = useState(false);
 
-    // Initialisation
+    // Initialisation - simplified logic
     useEffect(() => {
+        // Si l'utilisateur n'est pas connecté, le renvoyer à l'accueil
+        if (!passenger.isLoggedIn) {
+            router.replace('/');
+            return;
+        }
+
+        // Parcours déjà terminé : bloquer jusqu'à déconnexion
+        if (passenger.hasCompletedParcours) {
+            Alert.alert(
+                'Parcours déjà terminé',
+                'Vous avez déjà complété ce parcours.\n\nDéconnectez-vous puis reconnectez-vous pour en démarrer un nouveau.',
+                [{ text: 'Retour Accueil', onPress: () => router.replace('/') }]
+            );
+            return;
+        }
+
         if (!guideSessionId) {
-            // Start new session if none exists
+            // Start new session
             startGuideSession();
+            
+            // Start a new journey si pas de voyage actif
+            if (!passenger.currentJourneyId) {
+                console.log('[Guide] Starting new journey for passenger:', passenger.passengerId);
+                startNewJourney();
+            }
         } else {
             // Restore elapsed time if already running
             if (contextStepStartTime) {
@@ -71,7 +93,7 @@ export default function SmartGuideScreen() {
                 setElapsedSeconds(diff);
             }
         }
-    }, [guideSessionId]);
+    }, [guideSessionId, passenger.isLoggedIn]);
 
     // Timer Interval
     useEffect(() => {
@@ -181,9 +203,16 @@ export default function SmartGuideScreen() {
             // Finished
             setIsFinished(true);
             endGuideSession();
+            
+            // Complete the current journey with all completed steps
+            const stepIds = completedSteps.map(s => s.from);
+            stepIds.push(currentStep.id); // Add the last step
+            completeCurrentJourney(stepIds);
+            console.log('[Guide] Journey completed with steps:', stepIds);
+            
             Alert.alert(
                 "🎉 Parcours Terminé",
-                "Bon vol avec Royal Air Maroc !",
+                "Bon vol avec Royal Air Maroc !\n\nPour refaire un parcours, veuillez vous déconnecter puis vous reconnecter.",
                 [{ text: "Retour Accueil", onPress: () => router.replace('/') }]
             );
         }

@@ -108,12 +108,6 @@ export default function TabLayout() {
             href: null,
           }}
         />
-        <Tabs.Screen
-          name="index"
-          options={{
-            href: null,
-          }}
-        />
       </Tabs>
     </GestureHandlerRootView>
   );

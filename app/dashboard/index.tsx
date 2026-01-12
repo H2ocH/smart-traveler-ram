@@ -42,15 +42,16 @@ export default function DashboardScreen() {
 
             {/* Data Table */}
             <View style={styles.tableContainer}>
-                <Text style={styles.tableTitle}>📊 Tableau des Temps par Étape</Text>
+                <Text style={styles.tableTitle}>Tableau des Temps par Étape</Text>
 
                 {/* Table Header */}
                 <View style={styles.tableHeader}>
-                    <Text style={[styles.headerCell, { flex: 0.5 }]}>#</Text>
-                    <Text style={[styles.headerCell, { flex: 1.5 }]}>De</Text>
-                    <Text style={[styles.headerCell, { flex: 1.5 }]}>Vers</Text>
-                    <Text style={[styles.headerCell, { flex: 1 }]}>Durée</Text>
-                    <Text style={[styles.headerCell, { flex: 0.8 }]}>Type</Text>
+                    <Text style={[styles.headerCell, { flex: 0.8 }]}>Passager</Text>
+                    <Text style={[styles.headerCell, { flex: 0.6 }]}>Voyage</Text>
+                    <Text style={[styles.headerCell, { flex: 1.2 }]}>De</Text>
+                    <Text style={[styles.headerCell, { flex: 1.2 }]}>Vers</Text>
+                    <Text style={[styles.headerCell, { flex: 0.8 }]}>Durée</Text>
+                    <Text style={[styles.headerCell, { flex: 0.6 }]}>Type</Text>
                 </View>
 
                 {/* Table Rows */}
@@ -63,13 +64,18 @@ export default function DashboardScreen() {
                             !record.isSimulated && styles.realRow
                         ]}
                     >
-                        <Text style={[styles.cell, { flex: 0.5 }]}>{index + 1}</Text>
-                        <Text style={[styles.cell, { flex: 1.5 }]}>{record.stepFrom}</Text>
-                        <Text style={[styles.cell, { flex: 1.5 }]}>{record.stepTo}</Text>
-                        <Text style={[styles.cell, styles.durationCell, { flex: 1 }]}>
+                        <Text style={[styles.cell, { flex: 0.8, fontSize: 9 }]} numberOfLines={1}>
+                            {record.passengerId ? record.passengerId.substring(0, 8) : '-'}
+                        </Text>
+                        <Text style={[styles.cell, { flex: 0.6, fontSize: 9 }]} numberOfLines={1}>
+                            {record.journeyId ? record.journeyId.substring(0, 6) : '-'}
+                        </Text>
+                        <Text style={[styles.cell, { flex: 1.2 }]}>{record.stepFrom}</Text>
+                        <Text style={[styles.cell, { flex: 1.2 }]}>{record.stepTo}</Text>
+                        <Text style={[styles.cell, styles.durationCell, { flex: 0.8 }]}>
                             {formatDuration(record.durationSeconds)}
                         </Text>
-                        <View style={{ flex: 0.8, alignItems: 'center' }}>
+                        <View style={{ flex: 0.6, alignItems: 'center' }}>
                             <Text style={[
                                 styles.typeBadge,
                                 record.isSimulated ? styles.simBadge : styles.realBadge

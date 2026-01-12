@@ -632,6 +632,7 @@ io.on('connection', (socket) => {
         console.log(`[WS] 📥 User record received: ${record.stepFrom} -> ${record.stepTo} (${record.durationSeconds || 0}s) status=${record.stepStatus || 'completed'}`);
 
         const travelerId = record.travelerId;
+        const journeyId = record.journeyId || null;
 
         // Cas 1 : enregistrement IN_PROGRESS (démarrage d'étape pour un vrai utilisateur)
         if (record.stepStatus === 'in_progress') {
@@ -647,7 +648,12 @@ io.on('connection', (socket) => {
             // On ne supprime pas les autres in_progress ici pour ne pas perturber la simulation,
             // mais on peut nettoyer les doublons exacts du même travelerId.
             if (travelerId) {
-                crowdDataset = crowdDataset.filter(r => !(r.travelerId === travelerId && r.stepStatus === 'in_progress'));
+                // Ne supprimer que les in_progress du MÊME voyage (journeyId), conserver l'historique des voyages précédents
+                crowdDataset = crowdDataset.filter(r => !(
+                    r.travelerId === travelerId &&
+                    r.stepStatus === 'in_progress' &&
+                    (journeyId ? r.journeyId === journeyId : true)
+                ));
             }
             crowdDataset.unshift(inProgressRecord);
 
@@ -662,8 +668,12 @@ io.on('connection', (socket) => {
 
         // Cas 2 : enregistrement COMPLETED (fin d'étape)
         if (travelerId) {
-            // Nettoyer les anciens in_progress pour ce traveler (il avance)
-            crowdDataset = crowdDataset.filter(r => !(r.travelerId === travelerId && r.stepStatus === 'in_progress'));
+            // Nettoyer uniquement les in_progress du même voyage (pas des voyages précédents)
+            crowdDataset = crowdDataset.filter(r => !(
+                r.travelerId === travelerId &&
+                r.stepStatus === 'in_progress' &&
+                (journeyId ? r.journeyId === journeyId : true)
+            ));
         }
 
         const finishedRecord = {

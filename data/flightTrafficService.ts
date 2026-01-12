@@ -100,8 +100,7 @@ const processTrafficData = (arrivals: number, departures: number, isMock: boolea
         waitTimeMultiplier = 1.0 + ((totalFlights - 35) * 0.02); // +2% per flight above 35
     }
     
-    // Cap multiplier at 1.5x
-    waitTimeMultiplier = Math.min(waitTimeMultiplier, 1.5);
+    // No cap - multiplier scales with traffic
     
     return {
         arrivals,

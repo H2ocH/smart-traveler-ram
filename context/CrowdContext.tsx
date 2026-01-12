@@ -23,6 +23,8 @@ const SERVER_URL = 'http://172.20.10.7:3001'; // <-- REMPLACEZ PAR VOTRE IP
 
 // Interface pour les infos passager (optionnel)
 interface PassengerInfo {
+    passengerId?: string; // ID unique persistant du passager
+    journeyId?: string | null; // ID du voyage actuel
     travelerId?: string;
     flightId?: string;
     seat?: string;
@@ -203,6 +205,8 @@ export function CrowdProvider({ children }: CrowdProviderProps) {
 
         // Ajouter les infos passager depuis le contexte si connecté
         const autoPassengerInfo = passenger.isLoggedIn ? {
+            passengerId: passenger.passengerId, // ID unique persistant
+            journeyId: passenger.currentJourneyId, // ID du voyage actuel
             travelerId: passenger.passengerName || `user_${Date.now()}`,
             flightId: passenger.flightNumber,
             seat: passenger.seatNumber,
@@ -257,25 +261,41 @@ export function CrowdProvider({ children }: CrowdProviderProps) {
         return getAverageTime(dataset, from, to);
     };
 
-    // Obtenir le temps estimé AJUSTÉ avec le multiplicateur de trafic
-    const getAdjustedEstimatedTime = (from: string, to: string): number => {
-        const baseTime = getAverageTime(dataset, from, to);
-        const multiplier = flightTraffic?.waitTimeMultiplier || 1.0;
-        return Math.round(baseTime * multiplier);
+    // Calculer le multiplicateur basé sur le nombre d'utilisateurs actifs dans le parcours
+    const getActiveUsersMultiplier = (): number => {
+        const activeCount = getActiveInProgress();
+        // Pas de limite - plus il y a d'utilisateurs, plus l'attente augmente
+        // Base: 0-10 users = 1.0x, then +5% per 10 additional users
+        if (activeCount <= 10) return 1.0;
+        const extraUsers = activeCount - 10;
+        const additionalMultiplier = Math.floor(extraUsers / 10) * 0.05;
+        return 1.0 + additionalMultiplier;
     };
 
-    // Temps restant pour l'étape courante et total (en secondes) - AJUSTÉ avec trafic
+    // Obtenir le temps estimé AJUSTÉ avec le multiplicateur de trafic ET le nombre d'utilisateurs actifs
+    const getAdjustedEstimatedTime = (from: string, to: string): number => {
+        const baseTime = getAverageTime(dataset, from, to);
+        const trafficMultiplier = flightTraffic?.waitTimeMultiplier || 1.0;
+        const activeUsersMultiplier = getActiveUsersMultiplier();
+        // Combiner les deux multiplicateurs
+        const totalMultiplier = trafficMultiplier * activeUsersMultiplier;
+        return Math.round(baseTime * totalMultiplier);
+    };
+
+    // Temps restant pour l'étape courante et total (en secondes) - AJUSTÉ avec trafic ET utilisateurs actifs
     const getRemainingTimes = (stepIndex: number, now: number): { remainingCurrent: number; remainingTotal: number } => {
         const steps = AIRPORT_STEPS;
         const curIndex = Math.min(Math.max(stepIndex, 0), steps.length - 1);
         const cur = steps[curIndex];
         const next = steps[curIndex + 1];
-        const multiplier = flightTraffic?.waitTimeMultiplier || 1.0;
+        const trafficMultiplier = flightTraffic?.waitTimeMultiplier || 1.0;
+        const activeUsersMultiplier = getActiveUsersMultiplier();
+        const totalMultiplier = trafficMultiplier * activeUsersMultiplier;
 
         let remainingCurrent = 0;
         if (next) {
             const base = getEstimatedTime(cur.id, next.id);
-            const adjusted = Math.round(base * multiplier);
+            const adjusted = Math.round(base * totalMultiplier);
             const elapsed = stepStartTime ? Math.max(0, Math.floor((now - stepStartTime) / 1000)) : 0;
             remainingCurrent = Math.max(0, adjusted - elapsed);
         }
@@ -285,7 +305,7 @@ export function CrowdProvider({ children }: CrowdProviderProps) {
             const from = steps[i];
             const to = steps[i + 1];
             const baseTime = getEstimatedTime(from.id, to.id) || 0;
-            remainingTotal += Math.round(baseTime * multiplier);
+            remainingTotal += Math.round(baseTime * totalMultiplier);
         }
 
         return { remainingCurrent, remainingTotal };

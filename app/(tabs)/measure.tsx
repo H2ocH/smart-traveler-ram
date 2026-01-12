@@ -1,13 +1,13 @@
-import RequireAuth from '@/components/RequireAuth';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useIsFocused } from '@react-navigation/native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
   Image,
   Pressable,
+  ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -21,32 +21,48 @@ import {
 
 type Point = { x: number; y: number };
 
-// Carte bancaire (ISO/IEC 7810 ID-1)
+type Plan = '2D' | '3D';         // 2D = 1 photo, 3D = 2 photos
+type ViewMode = 'face' | 'side'; // face = largeur/hauteur, side = épaisseur
+
+// Référence carte bancaire (ISO/IEC 7810 ID-1)
 const CARD_W_MM = 85.6;
 const CARD_H_MM = 53.98;
 
-// Dimensions cabine RAM (pour verdict) — tu peux modifier si besoin
+// Limites cabine (ex: RAM — adapte si besoin)
 const CABIN_L = 55;
 const CABIN_W = 40;
 const CABIN_H = 25;
 
-// Soute : règle “somme <= 203 cm” (standard beaucoup de compagnies)
+// Soute : règle somme <= 203 cm (standard courant)
 const CHECKED_SUM_CM = 203;
 
 function dist(a: Point, b: Point) {
   const dx = a.x - b.x;
   const dy = a.y - b.y;
+
   return Math.sqrt(dx * dx + dy * dy);
 }
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
-function MeasureScreenContent() {
+export default function MeasureScreen() {
   const cameraRef = useRef<CameraView>(null);
   const [permission, requestPermission] = useCameraPermissions();
-  const isFocused = useIsFocused();
 
+  // Splash bar pour l'écran camera (optionnel)
+  useEffect(() => {
+    StatusBar.setBarStyle('light-content');
+    return () => StatusBar.setBarStyle('default');
+  }, []);
+
+  // Choix du plan (2D/3D)
+  const [plan, setPlan] = useState<Plan | null>(null);
+
+  // Vue actuelle : face puis side si 3D
+  const [viewMode, setViewMode] = useState<ViewMode>('face');
+
+  // Photos et points
   const [photoUri, setPhotoUri] = useState<string | null>(null);
 
   // points: ordre HG, HD, BD, BG
@@ -54,20 +70,9 @@ function MeasureScreenContent() {
   const [bagPts, setBagPts] = useState<Point[]>([]);
   const [imageLayout, setImageLayout] = useState<{ w: number; h: number }>({ w: 1, h: 1 });
 
-  // ---------- STEP ----------
-  const step = useMemo(() => {
-    if (!photoUri) return 'camera';
-    if (cardPts.length < 4) return 'card';
-    if (bagPts.length < 4) return 'bag';
-    return 'done';
-  }, [photoUri, cardPts.length, bagPts.length]);
-
-  const instruction = useMemo(() => {
-    const order = ['coin haut-gauche', 'coin haut-droit', 'coin bas-droit', 'coin bas-gauche'];
-    if (step === 'card') return `Tape le ${order[cardPts.length]} de la CARTE.`;
-    if (step === 'bag') return `Tape le ${order[bagPts.length]} de la VALISE.`;
-    return '';
-  }, [step, cardPts.length, bagPts.length]);
+  // Données finales
+  const [faceDims, setFaceDims] = useState<{ widthCm: number; heightCm: number } | null>(null);
+  const [sideDims, setSideDims] = useState<{ depthCm: number } | null>(null);
 
   // ---------- ZOOM / PAN ----------
   const baseScale = useRef(new Animated.Value(1)).current;
@@ -76,7 +81,6 @@ function MeasureScreenContent() {
 
   const panX = useRef(new Animated.Value(0)).current;
   const panY = useRef(new Animated.Value(0)).current;
-
   const offsetX = useRef(new Animated.Value(0)).current;
   const offsetY = useRef(new Animated.Value(0)).current;
 
@@ -119,9 +123,43 @@ function MeasureScreenContent() {
   const translateX = Animated.add(offsetX, panX);
   const translateY = Animated.add(offsetY, panY);
 
+  const resetZoomPan = () => {
+    baseScale.setValue(1);
+    pinchScale.setValue(1);
+    lastScale.current = 1;
+
+    offsetX.setValue(0);
+    offsetY.setValue(0);
+    panX.setValue(0);
+    panY.setValue(0);
+    lastOffset.current = { x: 0, y: 0 };
+  };
+
+  // ---------- STEP ----------
+  const step = useMemo(() => {
+    if (!plan) return 'choose_plan';
+    if (!photoUri) return 'camera';
+    if (cardPts.length < 4) return 'card';
+    if (bagPts.length < 4) return 'bag';
+
+    // Bag pts completed on this photo
+    if (plan === '3D' && viewMode === 'face' && !sideDims) return 'need_side';
+    return 'done';
+  }, [plan, photoUri, cardPts.length, bagPts.length, viewMode, sideDims]);
+
+  const instruction = useMemo(() => {
+    const order = ['coin haut-gauche', 'coin haut-droit', 'coin bas-droit', 'coin bas-gauche'];
+    if (step === 'card') return `Tape le ${order[cardPts.length]} de la CARTE.`;
+    if (step === 'bag') {
+      const who = viewMode === 'face' ? 'VALISE (FACE)' : 'VALISE (PROFIL)';
+      return `Tape le ${order[bagPts.length]} de la ${who}.`;
+    }
+    return '';
+  }, [step, cardPts.length, bagPts.length, viewMode]);
+
   // ---------- SCALE ESTIMATION ----------
+  // pixels/mm sur image affichée (à partir de la carte)
   const ppm = useMemo(() => {
-    // pixels/mm (sur image affichée)
     if (cardPts.length < 4) return null;
 
     const tl = cardPts[0];
@@ -139,7 +177,8 @@ function MeasureScreenContent() {
     return avg;
   }, [cardPts]);
 
-  const bagDims = useMemo(() => {
+  // Dimensions mesurées sur la photo courante (rectangle cliqué)
+  const bagDimsOnThisPhoto = useMemo(() => {
     if (!ppm || bagPts.length < 4) return null;
 
     const tl = bagPts[0];
@@ -155,59 +194,107 @@ function MeasureScreenContent() {
     return { widthCm, heightCm };
   }, [ppm, bagPts]);
 
-  const classification = useMemo(() => {
-    if (!bagDims) return null;
+  // Quand on a bagDims sur la photo, on sauvegarde dans faceDims ou sideDims
+  useEffect(() => {
+    if (!bagDimsOnThisPhoto) return;
 
-    // On a 2D (face). On classe “cabine possible” si 2 dimensions <= (55,40) (ordre libre)
-    const a = bagDims.widthCm;
-    const b = bagDims.heightCm;
+    if (viewMode === 'face') {
+      setFaceDims({
+        widthCm: bagDimsOnThisPhoto.widthCm,
+        heightCm: bagDimsOnThisPhoto.heightCm,
+      });
+    } else {
+      // sur le profil: on prend l'horizontale comme l'épaisseur
+      setSideDims({
+        depthCm: bagDimsOnThisPhoto.widthCm,
+      });
+    }
+  }, [bagDimsOnThisPhoto, viewMode]);
 
-    const max2 = Math.max(a, b);
-    const min2 = Math.min(a, b);
+  // Dimensions complètes (si 3D: largeur/hauteur + épaisseur)
+  const fullDims = useMemo(() => {
+    if (!faceDims) return null;
+    if (plan === '2D') return { ...faceDims, depthCm: null as number | null };
+    if (!sideDims) return null;
+    return { ...faceDims, depthCm: sideDims.depthCm };
+  }, [faceDims, sideDims, plan]);
 
-    const cabinPossible = (max2 <= CABIN_L && min2 <= CABIN_W);
+  // Verdict cabine/soute avec 3 dimensions si dispo
+  const sizeVerdict = useMemo(() => {
+    if (!fullDims) return null;
+
+    if (fullDims.depthCm == null) {
+      // 2D only -> verdict partiel
+      const a = fullDims.widthCm;
+      const b = fullDims.heightCm;
+      const max2 = Math.max(a, b);
+      const min2 = Math.min(a, b);
+      const cabinPossible2D = max2 <= CABIN_L && min2 <= CABIN_W;
+      return {
+        mode: '2D' as const,
+        verdict: cabinPossible2D
+          ? `✅ Face OK pour cabine (épaisseur inconnue)`
+          : `❌ Face trop grande pour cabine`,
+        note: `Pour conclure 100% cabine, mesure aussi l’épaisseur (3D).`,
+      };
+    }
+
+    // 3D -> on compare dimensions triées au standard cabine
+    const dims = [fullDims.widthCm, fullDims.heightCm, fullDims.depthCm].sort((x, y) => y - x);
+    const cabinDims = [CABIN_L, CABIN_W, CABIN_H].sort((x, y) => y - x);
+
+    const cabinOk =
+      dims[0] <= cabinDims[0] && dims[1] <= cabinDims[1] && dims[2] <= cabinDims[2];
+
+    const sum = dims[0] + dims[1] + dims[2];
+    const checkedOk = sum <= CHECKED_SUM_CM;
 
     return {
-      cabinRule: `Cabine: ≤ ${CABIN_L}×${CABIN_W}×${CABIN_H} cm`,
-      checkedRule: `Soute: somme (L+W+H) ≤ ${CHECKED_SUM_CM} cm`,
-      verdict: cabinPossible
-        ? `✅ Cabine possible si l’épaisseur ≤ ${CABIN_H} cm`
-        : `❌ Trop grand pour cabine (sur la photo)`,
-      note: `* Pour conclure 100% "cabine", il faut aussi mesurer l’épaisseur (photo de profil).`,
+      mode: '3D' as const,
+      cabinOk,
+      checkedOk,
+      verdict: cabinOk
+        ? `✅ Cabine OK (${CABIN_L}×${CABIN_W}×${CABIN_H} cm)`
+        : checkedOk
+        ? `🟠 Pas cabine, mais OK soute (somme ≤ ${CHECKED_SUM_CM} cm)`
+        : `🔴 Dépasse même la soute (somme > ${CHECKED_SUM_CM} cm)`,
     };
-  }, [bagDims]);
+  }, [fullDims]);
 
   // ---------- ACTIONS ----------
   const takePhoto = async () => {
     try {
       if (!cameraRef.current) return;
       // @ts-ignore
-      const pic = await cameraRef.current.takePictureAsync({ quality: 0.7 });
+      const pic = await cameraRef.current.takePictureAsync({ quality: 0.75 });
       if (!pic?.uri) return;
 
       setPhotoUri(pic.uri);
       setCardPts([]);
       setBagPts([]);
-
-      // reset zoom/pan
-      baseScale.setValue(1);
-      pinchScale.setValue(1);
-      lastScale.current = 1;
-
-      offsetX.setValue(0);
-      offsetY.setValue(0);
-      panX.setValue(0);
-      panY.setValue(0);
-      lastOffset.current = { x: 0, y: 0 };
+      resetZoomPan();
     } catch {
       Alert.alert('Erreur', "Impossible de prendre la photo.");
     }
   };
 
-  const retake = () => {
+  const retakeThisShot = () => {
+    // refaire la photo courante (face ou side)
     setPhotoUri(null);
     setCardPts([]);
     setBagPts([]);
+    resetZoomPan();
+  };
+
+  const resetAll = () => {
+    setPlan(null);
+    setViewMode('face');
+    setPhotoUri(null);
+    setCardPts([]);
+    setBagPts([]);
+    setFaceDims(null);
+    setSideDims(null);
+    resetZoomPan();
   };
 
   const resetPoints = () => {
@@ -216,19 +303,14 @@ function MeasureScreenContent() {
   };
 
   const undoLast = () => {
-    if (step === 'card') {
-      setCardPts((prev) => prev.slice(0, -1));
-    } else if (step === 'bag') {
-      setBagPts((prev) => prev.slice(0, -1));
-    }
+    if (step === 'card') setCardPts((prev) => prev.slice(0, -1));
+    else if (step === 'bag') setBagPts((prev) => prev.slice(0, -1));
   };
 
   const onTapImage = (evt: any) => {
     if (step !== 'card' && step !== 'bag') return;
 
     const { locationX, locationY } = evt.nativeEvent;
-
-    // attention: on utilise la position sur l'image affichée
     const x = clamp(locationX, 0, imageLayout.w);
     const y = clamp(locationY, 0, imageLayout.h);
     const p = { x, y };
@@ -246,7 +328,16 @@ function MeasureScreenContent() {
     }
   };
 
-  // ---------- UI PERMISSIONS ----------
+  const goToSideMeasurement = () => {
+    // on passe à la 2e photo
+    setPhotoUri(null);
+    setCardPts([]);
+    setBagPts([]);
+    setViewMode('side');
+    resetZoomPan();
+  };
+
+  // ---------- PERMISSIONS ----------
   if (!permission) {
     return (
       <View style={styles.center}>
@@ -268,25 +359,70 @@ function MeasureScreenContent() {
 
   // ---------- UI ----------
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 24 }}>
       <View style={styles.header}>
-        <View style={styles.headerRow}>
-          <MaterialIcons name="straighten" size={24} color="#111" />
-          <Text style={styles.hTitle}>Mesure valise</Text>
-        </View>
-        <Text style={styles.hSub}>Référence : carte bancaire</Text>
+        <Text style={styles.hTitle}>📏 Mesure valise (2D / 3D)</Text>
+        <Text style={styles.hSub}>Référence : carte bancaire (à mettre visible sur chaque photo)</Text>
       </View>
 
-      {!photoUri ? (
+      {/* 1) Choix du plan */}
+      {step === 'choose_plan' && (
         <View style={styles.card}>
+          <Text style={styles.bigTitle}>Tu veux mesurer quoi ?</Text>
+
+          <TouchableOpacity
+            style={[styles.primaryBtn, { backgroundColor: '#7A0C0C' }]}
+            onPress={() => {
+              setPlan('2D');
+              setViewMode('face');
+              setFaceDims(null);
+              setSideDims(null);
+            }}
+          >
+            <Text style={styles.primaryBtnText}>Mesure 2D (Largeur + Hauteur)</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.primaryBtn, { backgroundColor: '#B22222' }]}
+            onPress={() => {
+              setPlan('3D');
+              setViewMode('face');
+              setFaceDims(null);
+              setSideDims(null);
+            }}
+          >
+            <Text style={styles.primaryBtnText}>Mesure 3D (Face + Profil = Épaisseur)</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.tipTextCenter}>
+            • 2D = 1 photo (face), verdict cabine partiel{'\n'}
+            • 3D = 2 photos (face puis profil), verdict cabine complet
+          </Text>
+        </View>
+      )}
+
+      {/* 2) Caméra */}
+      {step === 'camera' && (
+        <View style={styles.card}>
+          <View style={styles.modeRow}>
+            <View style={[styles.badge, { backgroundColor: '#111' }]}>
+              <Text style={styles.badgeText}>Plan: {plan}</Text>
+            </View>
+            <View style={[styles.badge, { backgroundColor: viewMode === 'face' ? '#1E88E5' : '#4CAF50' }]}>
+              <Text style={styles.badgeText}>
+                {viewMode === 'face' ? 'Photo FACE (L×H)' : 'Photo PROFIL (Épaisseur)'}
+              </Text>
+            </View>
+          </View>
+
           <View style={styles.cameraBox}>
-            {isFocused && <CameraView ref={cameraRef} style={styles.camera} facing="back" />}
+            <CameraView ref={cameraRef} style={styles.camera} facing="back" />
           </View>
 
           <View style={styles.tipBox}>
             <Text style={styles.tipTitle}>Conseil</Text>
             <Text style={styles.tipText}>
-              Mets la carte bancaire à côté de la face de la valise (bien visible). Photo bien de face.
+              Photo bien de face, carte visible. Pour profil (épaisseur), tourne la valise sur le côté.
             </Text>
           </View>
 
@@ -294,18 +430,24 @@ function MeasureScreenContent() {
             <MaterialIcons name="photo-camera" size={20} color="#fff" />
             <Text style={styles.primaryBtnText}>Prendre la photo</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity style={styles.ghostBtn} onPress={resetAll}>
+            <Text style={styles.ghostText}>Revenir au choix 2D/3D</Text>
+          </TouchableOpacity>
         </View>
-      ) : (
+      )}
+
+      {/* 3) Mesure sur photo */}
+      {photoUri && step !== 'choose_plan' && (
         <View style={styles.card}>
-          <View style={styles.stepRow}>
-            <View style={[styles.chip, step === 'card' && styles.chipActive]}>
-              <Text style={[styles.chipText, step === 'card' && styles.chipTextActive]}>1) Carte</Text>
+          <View style={styles.modeRow}>
+            <View style={[styles.badge, { backgroundColor: '#111' }]}>
+              <Text style={styles.badgeText}>Plan: {plan}</Text>
             </View>
-            <View style={[styles.chip, step === 'bag' && styles.chipActive]}>
-              <Text style={[styles.chipText, step === 'bag' && styles.chipTextActive]}>2) Valise</Text>
-            </View>
-            <View style={[styles.chip, step === 'done' && styles.chipActive]}>
-              <Text style={[styles.chipText, step === 'done' && styles.chipTextActive]}>3) Résultat</Text>
+            <View style={[styles.badge, { backgroundColor: viewMode === 'face' ? '#1E88E5' : '#4CAF50' }]}>
+              <Text style={styles.badgeText}>
+                {viewMode === 'face' ? 'FACE (L×H)' : 'PROFIL (Épaisseur)'}
+              </Text>
             </View>
           </View>
 
@@ -337,6 +479,7 @@ function MeasureScreenContent() {
                           }}
                         />
 
+                        {/* Points carte */}
                         {cardPts.map((p, i) => (
                           <View
                             key={`c-${i}`}
@@ -347,6 +490,7 @@ function MeasureScreenContent() {
                           />
                         ))}
 
+                        {/* Points valise */}
                         {bagPts.map((p, i) => (
                           <View
                             key={`b-${i}`}
@@ -379,29 +523,7 @@ function MeasureScreenContent() {
             </View>
           </View>
 
-          {ppm && (
-            <Text style={styles.scaleText}>Échelle: {ppm.toFixed(2)} px/mm</Text>
-          )}
-
-          {bagDims && (
-            <View style={styles.resultBox}>
-              <View style={styles.resultHeader}>
-                <MaterialIcons name="inventory-2" size={20} color="#065f46" />
-                <Text style={styles.resultTitle}>Dimensions estimées</Text>
-              </View>
-              <Text style={styles.resultLine}>Largeur: {bagDims.widthCm.toFixed(1)} cm</Text>
-              <Text style={styles.resultLine}>Hauteur: {bagDims.heightCm.toFixed(1)} cm</Text>
-
-              <View style={styles.ruleBox}>
-                <Text style={styles.ruleTitle}>Cabine / Soute</Text>
-                <Text style={styles.ruleText}>{classification?.cabinRule}</Text>
-                <Text style={styles.ruleText}>{classification?.checkedRule}</Text>
-                <Text style={styles.verdict}>{classification?.verdict}</Text>
-                <Text style={styles.note}>{classification?.note}</Text>
-              </View>
-            </View>
-          )}
-
+          {/* Boutons points */}
           <View style={styles.btnRow}>
             <TouchableOpacity
               style={[styles.secondaryBtn, !(step === 'card' || step === 'bag') && styles.btnDisabled]}
@@ -419,13 +541,65 @@ function MeasureScreenContent() {
           </View>
 
           <View style={styles.btnRow}>
-            <TouchableOpacity style={styles.ghostBtn} onPress={retake}>
-              <Text style={styles.ghostText}>Refaire photo</Text>
+            <TouchableOpacity style={styles.ghostBtn} onPress={retakeThisShot}>
+              <Text style={styles.ghostText}>Refaire cette photo</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.ghostBtn} onPress={resetAll}>
+              <Text style={styles.ghostText}>Tout recommencer</Text>
             </TouchableOpacity>
           </View>
+
+          {/* Résumé des mesures */}
+          {faceDims && (
+            <View style={styles.resultBox}>
+              <Text style={styles.resultTitle}>📐 Mesure FACE</Text>
+              <Text style={styles.resultLine}>Largeur ≈ {faceDims.widthCm.toFixed(1)} cm</Text>
+              <Text style={styles.resultLine}>Hauteur ≈ {faceDims.heightCm.toFixed(1)} cm</Text>
+            </View>
+          )}
+
+          {sideDims && (
+            <View style={[styles.resultBox, { backgroundColor: '#eef6ff' }]}>
+              <Text style={styles.resultTitle}>📐 Mesure PROFIL</Text>
+              <Text style={styles.resultLine}>Épaisseur ≈ {sideDims.depthCm.toFixed(1)} cm</Text>
+            </View>
+          )}
+
+          {/* Besoin photo profil */}
+          {step === 'need_side' && (
+            <View style={{ marginTop: 12 }}>
+              <Text style={styles.needSideText}>
+                ✅ Face mesurée. Maintenant tourne la valise sur le côté (profil) pour mesurer l’épaisseur.
+              </Text>
+              <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: '#7A0C0C' }]} onPress={goToSideMeasurement}>
+                <Text style={styles.primaryBtnText}>Mesurer l’épaisseur (Profil)</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Résultat final */}
+          {step === 'done' && (
+            <View style={{ marginTop: 12 }}>
+              {/* Verdict taille */}
+              {sizeVerdict && (
+                <View style={styles.ruleBox}>
+                  <Text style={styles.ruleTitle}>Cabine / Soute</Text>
+                  <Text style={styles.verdict}>{sizeVerdict.verdict}</Text>
+                  {'note' in sizeVerdict && (
+                    <Text style={styles.note}>{sizeVerdict.note}</Text>
+                  )}
+                  {'mode' in sizeVerdict && sizeVerdict.mode === '3D' && (
+                    <Text style={styles.note}>
+                      Standard cabine: ≤ {CABIN_L}×{CABIN_W}×{CABIN_H} cm • Soute: somme ≤ {CHECKED_SUM_CM} cm
+                    </Text>
+                  )}
+                </View>
+              )}
+            </View>
+          )}
         </View>
       )}
-    </View>
+    </ScrollView>
   );
 }
 
@@ -435,9 +609,8 @@ const styles = StyleSheet.create({
   msg: { color: '#111', marginBottom: 10, fontWeight: '600' },
 
   header: { alignItems: 'center', marginBottom: 10 },
-  hTitle: { fontSize: 20, fontWeight: '900', color: '#111' },
-  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  hSub: { fontSize: 12, color: '#6b7280', marginTop: 2 },
+  hTitle: { fontSize: 18, fontWeight: '900', color: '#111' },
+  hSub: { fontSize: 12, color: '#6b7280', marginTop: 2, textAlign: 'center' },
 
   card: {
     backgroundColor: '#fff',
@@ -449,12 +622,19 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
 
+  bigTitle: { fontWeight: '900', fontSize: 16, textAlign: 'center', marginBottom: 10, color: '#111' },
+
+  modeRow: { flexDirection: 'row', gap: 8, justifyContent: 'center', marginBottom: 10, flexWrap: 'wrap' },
+  badge: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: 999 },
+  badgeText: { color: '#fff', fontWeight: '900', fontSize: 12 },
+
   cameraBox: { height: 420, borderRadius: 14, overflow: 'hidden' },
   camera: { flex: 1 },
 
   tipBox: { marginTop: 10, padding: 10, backgroundColor: '#f9fafb', borderRadius: 12 },
   tipTitle: { fontWeight: '800', color: '#111', marginBottom: 4 },
   tipText: { fontSize: 12, color: '#374151' },
+  tipTextCenter: { marginTop: 10, color: '#6b7280', fontSize: 12, textAlign: 'center', lineHeight: 18 },
 
   primaryBtn: {
     marginTop: 12,
@@ -468,11 +648,16 @@ const styles = StyleSheet.create({
   },
   primaryBtnText: { color: '#fff', fontWeight: '900' },
 
-  stepRow: { flexDirection: 'row', gap: 8, justifyContent: 'center', marginBottom: 10 },
-  chip: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: 999, backgroundColor: '#f3f4f6' },
-  chipActive: { backgroundColor: '#111' },
-  chipText: { fontSize: 12, color: '#374151', fontWeight: '700' },
-  chipTextActive: { color: '#fff' },
+  ghostBtn: {
+    marginTop: 10,
+    paddingVertical: 11,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ghostText: { fontWeight: '900', color: '#111' },
 
   instruction: { textAlign: 'center', fontWeight: '800', color: '#111', marginBottom: 8 },
 
@@ -498,19 +683,6 @@ const styles = StyleSheet.create({
   infoLabel: { fontSize: 11, color: '#6b7280', fontWeight: '700' },
   infoValue: { fontSize: 12, color: '#111', fontWeight: '900', marginTop: 4 },
 
-  scaleText: { marginTop: 8, textAlign: 'center', color: '#374151', fontWeight: '700' },
-
-  resultBox: { marginTop: 10, backgroundColor: '#ecfdf5', borderRadius: 12, padding: 12 },
-  resultHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
-  resultTitle: { fontWeight: '900', color: '#065f46' },
-  resultLine: { fontWeight: '800', color: '#065f46' },
-
-  ruleBox: { marginTop: 10, padding: 10, backgroundColor: '#fff', borderRadius: 12 },
-  ruleTitle: { fontWeight: '900', color: '#111', marginBottom: 6 },
-  ruleText: { fontSize: 12, color: '#374151' },
-  verdict: { marginTop: 8, fontWeight: '900', color: '#111' },
-  note: { marginTop: 6, fontSize: 11, color: '#6b7280' },
-
   btnRow: { flexDirection: 'row', gap: 10, marginTop: 10 },
   secondaryBtn: {
     flex: 1,
@@ -525,22 +697,14 @@ const styles = StyleSheet.create({
   secondaryBtnText: { fontWeight: '900', color: '#111' },
   btnDisabled: { opacity: 0.4 },
 
-  ghostBtn: {
-    flex: 1,
-    paddingVertical: 11,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ghostText: { fontWeight: '900', color: '#111' },
-});
+  resultBox: { marginTop: 10, backgroundColor: '#ecfdf5', borderRadius: 12, padding: 12 },
+  resultTitle: { fontWeight: '900', color: '#065f46', marginBottom: 6 },
+  resultLine: { fontWeight: '800', color: '#065f46' },
 
-export default function MeasureScreen() {
-  return (
-    <RequireAuth>
-      <MeasureScreenContent />
-    </RequireAuth>
-  );
-}
+  needSideText: { textAlign: 'center', fontWeight: '800', color: '#111', marginBottom: 8 },
+
+  ruleBox: { marginTop: 10, padding: 12, backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#f3f4f6' },
+  ruleTitle: { fontWeight: '900', color: '#111', marginBottom: 6 },
+  verdict: { marginTop: 4, fontWeight: '900', color: '#111' },
+  note: { marginTop: 6, fontSize: 11, color: '#6b7280', lineHeight: 16 },
+});

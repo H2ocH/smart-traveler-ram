@@ -12,6 +12,8 @@ export interface TimeRecord {
     isSimulated: boolean;
     dayType: 'crowded' | 'normal' | 'empty';
     // Champs optionnels injectés par le serveur (realtime)
+    passengerId?: string; // ID unique persistant du passager
+    journeyId?: string | null; // ID du voyage actuel
     travelerId?: string;
     stepStatus?: string;
     depAirport?: string;

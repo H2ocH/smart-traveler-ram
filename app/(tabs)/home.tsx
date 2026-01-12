@@ -507,10 +507,6 @@ export default function HomeScreen() {
               <Text style={styles.heroTimeValue}>{formatDuration(remainingTotal + 1800, true)}</Text>
               <Text style={styles.heroTimeSubtext}>Incluant 30 min de marge</Text>
             </View>
-            <View style={styles.heroTimeBadge}>
-              <MaterialCommunityIcons name="shield-check" size={16} color="#A78BFA" />
-              <Text style={styles.heroTimeBadgeText}>Recommandé par RAM</Text>
-            </View>
           </View>
         </View>
 
@@ -636,7 +632,10 @@ export default function HomeScreen() {
             <Text style={styles.actionTitle}>Poids Bagage</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionCard} onPress={() => router.push('/(tabs)/shop')}>
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={() => router.push({ pathname: '/(tabs)/shop', params: { shopId: 'shop-duty-free' } })}
+          >
             <View style={[styles.actionIcon, { backgroundColor: 'rgba(8, 145, 178, 0.1)' }]}>
               <MaterialCommunityIcons name="shopping" size={28} color="#0891B2" />
             </View>
